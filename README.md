@@ -1,3 +1,4 @@
+# WebDevelopment5thSemester
 # Plataforma de Gestão Financeira para MEI
 
 Projeto SaaS voltado para Microempreendedores Individuais (MEI) no Brasil, com foco em registrar movimentações financeiras, calcular indicadores básicos do negócio e oferecer apoio à decisão com um assistente de IA contextualizado.
