@@ -1,0 +1,7 @@
+type,amount,date,description,category
+income,1500.00,2024-01-10,Venda de camisetas,Vendas
+expense,300.00,2024-01-15,Conta de luz,Utilidades
+income,800.00,2024-01-20,Serviço de design,Serviços
+expense,150.00,2024-01-22,Material de escritório,Materiais
+income,2200.00,2024-01-28,Venda online,Vendas
+expense,500.00,2024-01-30,Aluguel do espaço,Aluguel
