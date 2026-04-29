@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+*.sln.DotSettings.user
+coverage.opencover.xml
+coverage.cobertura.xml
