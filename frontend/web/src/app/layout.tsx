@@ -46,6 +46,9 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${inter.variable}`}
     >
       <body className="bg-obsidian-bg text-on-surface antialiased">
+        {/* Fixed ambient glows — aparecem em todas as páginas */}
+        <div className="page-glow-tr" aria-hidden="true" />
+        <div className="page-glow-bl" aria-hidden="true" />
         {children}
       </body>
     </html>

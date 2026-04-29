@@ -1,6 +1,6 @@
 import { AppProviders } from "@/context";
 import { Header, Footer } from "./components/global";
-import { Hero, CTA, Features } from "./components/landing-page";
+import { Hero, Features, Plans, CTA } from "./components/landing-page";
 
 export default function Home() {
   return (
@@ -9,6 +9,7 @@ export default function Home() {
       <main className="pt-20 min-h-screen">
         <Hero />
         <Features />
+        <Plans />
         <CTA />
       </main>
       <Footer />
