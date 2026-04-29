@@ -49,7 +49,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
             color: "#E6E1E5",
             fontSize: 12,
           }}
-          formatter={(value: number) => [formatCurrency(value), ""]}
+          formatter={(value) => [formatCurrency(Number(value ?? 0)), ""]}
         />
         <Legend
           iconType="circle"

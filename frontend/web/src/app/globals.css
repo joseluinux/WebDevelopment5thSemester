@@ -5,7 +5,7 @@
   --font-space-grotesk: "Space Grotesk", sans-serif;
   --font-inter: "Inter", sans-serif;
 
-  --color-bg: #141315;
+  --color-bg: #0A0A0C;
   --color-surface: #1C1B1D;
   --color-card: #201F21;
   --color-elevated: #2B292C;
@@ -27,6 +27,11 @@ body {
   font-family: var(--font-inter);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Material Symbols Outlined icon font ─── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 /* ─── Scrollbar Obsidian ─── */

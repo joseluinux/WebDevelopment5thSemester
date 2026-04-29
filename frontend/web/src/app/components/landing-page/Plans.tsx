@@ -1,114 +1,89 @@
 import Link from "next/link";
 
-const plans = [
-  {
-    name: "Starter",
-    price: "Grátis",
-    period: "",
-    description: "Para quem está começando a controlar as finanças do MEI.",
-    features: [
-      "1 MEI cadastrado",
-      "Até 50 transações/mês",
-      "Dashboard básico",
-      "Importação CSV",
-      "Suporte por email",
-    ],
-    cta: "Começar Grátis",
-    href: "/register",
-    highlight: false,
-  },
-  {
-    name: "Pro Oracle",
-    price: "R$ 29",
-    period: "/mês",
-    description: "Para MEIs que querem inteligência financeira completa.",
-    features: [
-      "Até 5 MEIs cadastrados",
-      "Transações ilimitadas",
-      "IA Oracle integrada",
-      "Relatórios automáticos",
-      "Ponto de equilíbrio",
-      "Insights personalizados",
-      "Suporte prioritário",
-    ],
-    cta: "Assinar Pro Oracle",
-    href: "/register?plan=pro",
-    highlight: true,
-  },
-];
-
 export function Plans() {
   return (
-    <section id="plans" className="py-24 px-8 relative overflow-hidden">
-      <div className="absolute bottom-0 right-0 w-100 h-100 bg-accent/8 blur-[100px] rounded-full -z-10 pointer-events-none" />
-
+    <section id="plans" className="px-8 py-32 bg-[#131315]">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-14">
-          <p className="text-accent text-xs uppercase tracking-widest font-display mb-3">Planos</p>
-          <h2 className="font-display text-4xl sm:text-5xl font-bold tracking-tighter text-on-surface leading-tight">
-            Simples e transparente
+        <div className="text-center mb-20">
+          <h2 className="font-headline text-4xl md:text-5xl font-bold mb-6">
+            Escalabilidade Sob Medida
           </h2>
-          <p className="text-on-muted mt-4 max-w-md mx-auto text-sm leading-relaxed">
-            Sem cobranças surpresa. Comece grátis e evolua quando quiser.
+          <p className="text-on-surface-variant max-w-xl mx-auto">
+            Comece gratuitamente e evolua seu império com ferramentas de elite.
           </p>
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`rounded-4xl p-8 border flex flex-col gap-6 relative overflow-hidden transition-all duration-300 ${
-                plan.highlight
-                  ? "bg-obsidian-card border-accent/30 glow-primary"
-                  : "bg-obsidian-surface border-obsidian-elevated/50 hover:border-accent/20"
-              }`}
-            >
-              {plan.highlight && (
-                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 blur-2xl rounded-full pointer-events-none" />
-              )}
-
-              {plan.highlight && (
-                <div className="absolute top-4 right-4">
-                  <span className="text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full bg-linear-to-br from-accent to-accent-light text-[#002979]">
-                    Popular
-                  </span>
-                </div>
-              )}
-
-              <div>
-                <p className="text-on-muted text-xs uppercase tracking-widest font-display mb-2">{plan.name}</p>
-                <div className="flex items-end gap-1">
-                  <span className="font-display text-4xl font-bold text-on-surface tracking-tighter">{plan.price}</span>
-                  {plan.period && <span className="text-on-muted text-sm mb-1">{plan.period}</span>}
-                </div>
-                <p className="text-on-muted text-sm mt-2 leading-relaxed">{plan.description}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Free Plan */}
+          <div className="rounded-[2.5rem] bg-surface-container-low p-12 border border-outline-variant/10 flex flex-col justify-between hover:bg-surface-container transition-all duration-300">
+            <div>
+              <div className="text-sm font-bold text-primary tracking-widest uppercase mb-4">Starter</div>
+              <div className="flex items-baseline gap-1 mb-8">
+                <span className="text-4xl font-headline font-bold">R$ 0</span>
+                <span className="text-on-surface-variant">/mês</span>
               </div>
-
-              <ul className="flex flex-col gap-2.5">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2.5 text-on-surface/80 text-sm">
-                    <svg className="w-4 h-4 text-accent shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    {f}
-                  </li>
-                ))}
+              <ul className="space-y-5">
+                <li className="flex items-center gap-3 text-on-surface-variant">
+                  <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
+                  Gestão básica de despesas
+                </li>
+                <li className="flex items-center gap-3 text-on-surface-variant">
+                  <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
+                  Cálculo de lucro mensal
+                </li>
+                <li className="flex items-center gap-3 text-on-surface-variant">
+                  <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
+                  Acesso mobile
+                </li>
               </ul>
-
-              <Link
-                href={plan.href}
-                className={`mt-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm transition-all ${
-                  plan.highlight
-                    ? "bg-linear-to-br from-accent to-accent-light text-[#002979] hover:brightness-110 glow-primary"
-                    : "border border-obsidian-elevated text-on-muted hover:text-on-surface hover:border-accent/30"
-                }`}
-              >
-                {plan.cta}
-              </Link>
             </div>
-          ))}
+            <Link
+              href="/register"
+              className="mt-12 w-full py-4 rounded-xl border border-outline-variant/30 text-on-surface font-semibold hover:bg-surface-variant/50 transition-all text-center block"
+            >
+              Começar Grátis
+            </Link>
+          </div>
+
+          {/* Pro Plan */}
+          <div className="relative rounded-[2.5rem] bg-surface-container p-12 border-2 border-primary/30 flex flex-col justify-between overflow-hidden glow-primary shadow-[0_0_40px_rgba(106,140,242,0.1)]">
+            <div className="absolute top-0 right-0 bg-primary px-6 py-2 rounded-bl-3xl text-on-primary text-xs font-bold uppercase tracking-tighter">
+              Mais Popular
+            </div>
+            <div className="relative z-10">
+              <div className="text-sm font-bold text-primary tracking-widest uppercase mb-4">Pro Oracle</div>
+              <div className="flex items-baseline gap-1 mb-8">
+                <span className="text-4xl font-headline font-bold">R$ 49,90</span>
+                <span className="text-on-surface-variant">/mês</span>
+              </div>
+              <ul className="space-y-5">
+                <li className="flex items-center gap-3 text-on-surface">
+                  <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  Inteligência Preditiva de Caixa
+                </li>
+                <li className="flex items-center gap-3 text-on-surface">
+                  <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  Relatórios DASN Automatizados
+                </li>
+                <li className="flex items-center gap-3 text-on-surface">
+                  <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  Consultoria AI Financeira 24/7
+                </li>
+                <li className="flex items-center gap-3 text-on-surface">
+                  <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  Suporte Prioritário
+                </li>
+              </ul>
+            </div>
+            <Link
+              href="/register?plan=pro"
+              className="relative z-10 mt-12 w-full py-4 rounded-xl bg-linear-to-br from-primary-container to-primary text-on-primary font-bold text-lg hover:brightness-110 transition-all text-center block"
+            >
+              Assinar Agora
+            </Link>
+          </div>
         </div>
       </div>
     </section>

@@ -45,7 +45,13 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${spaceGrotesk.variable} ${inter.variable}`}
     >
-      <body className="bg-obsidian-bg text-on-surface antialiased">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        />
+      </head>
+      <body className="bg-background text-on-surface font-body antialiased selection:bg-primary/30 selection:text-primary">
         {/* Fixed ambient glows — aparecem em todas as páginas */}
         <div className="page-glow-tr" aria-hidden="true" />
         <div className="page-glow-bl" aria-hidden="true" />

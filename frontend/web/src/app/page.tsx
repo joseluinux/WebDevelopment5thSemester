@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <AppProviders>
       <Header />
-      <main className="pt-20 min-h-screen">
+      <main className="relative pt-24 overflow-hidden">
         <Hero />
         <Features />
         <Plans />

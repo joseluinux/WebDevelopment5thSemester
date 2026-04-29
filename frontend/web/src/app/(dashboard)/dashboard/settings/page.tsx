@@ -139,7 +139,8 @@ function ProfileTab() {
 
 /* ──────────────── Business Tab ──────────────── */
 function BusinessTab() {
-  const { meis, activeMeiId, setActiveMei } = useMeiContext();
+  const { meis, activeMei, setActiveMei } = useMeiContext();
+  const activeMeiId = activeMei?.id ?? null;
 
   return (
     <div className="space-y-4">
@@ -214,20 +215,20 @@ function BillingTab() {
       <div className="bg-obsidian-card rounded-card border border-obsidian-elevated p-6">
         <p className="text-on-surface font-semibold mb-4">Available Plans</p>
         <div className="space-y-3">
-          {PLANS.map((plan) => (
+          {Object.entries(PLANS).map(([id, plan]) => (
             <div
-              key={plan.id}
+              key={id}
               className={cn(
                 "flex items-center justify-between p-4 rounded-xl border transition-colors",
-                plan.id === "pro"
+                id === "pro"
                   ? "border-accent/40 bg-accent/5"
                   : "border-obsidian-elevated",
               )}
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-on-surface font-semibold">{plan.name}</p>
-                  {plan.id === "pro" && (
+                  <p className="text-on-surface font-semibold">{plan.label}</p>
+                  {id === "pro" && (
                     <span className="text-xs font-bold bg-accent/15 text-accent border border-accent/30 px-2 py-0.5 rounded">
                       RECOMMENDED
                     </span>
@@ -253,12 +254,12 @@ function BillingTab() {
               <button
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
-                  plan.id === "pro"
+                  id === "pro"
                     ? "bg-accent text-white hover:bg-accent-muted"
                     : "border border-obsidian-elevated text-on-muted hover:text-on-surface",
                 )}
               >
-                {plan.id === "pro" ? "Upgrade" : "Current"}
+                {id === "pro" ? "Upgrade" : "Current"}
               </button>
             </div>
           ))}
@@ -393,7 +394,7 @@ function CurrentPlanCard() {
 
 function AnnualLimitCard() {
   const revenue = 68500;
-  const pct = calcAnnualLimitPercent(revenue);
+  const pct = calcAnnualLimitPercent(revenue, MEI_ANNUAL_LIMIT);
   return (
     <div className="bg-obsidian-card rounded-card border border-obsidian-elevated p-5">
       <p className="text-on-muted text-xs uppercase tracking-widest font-semibold mb-3">
