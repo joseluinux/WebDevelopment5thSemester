@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/* ─── Obsidian Design System Tokens ─── */
+:root {
+  --font-space-grotesk: "Space Grotesk", sans-serif;
+  --font-inter: "Inter", sans-serif;
+
+  --color-bg: #141315;
+  --color-surface: #1C1B1D;
+  --color-card: #201F21;
+  --color-elevated: #2B292C;
+  --color-popover: #3A393B;
+  --color-accent: #6A8CF2;
+  --color-accent-light: #B4C5FF;
+  --color-on-surface: #E6E1E5;
+  --color-on-muted: #938F99;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-on-surface);
+  font-family: var(--font-inter);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar Obsidian ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-elevated);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background-color: rgba(106, 140, 242, 0.3);
+  color: var(--color-on-surface);
+}
+
+/* ─── Shimmer skeleton animation ─── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #201F21 25%, #2B292C 50%, #201F21 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+  border-radius: 6px;
+}
