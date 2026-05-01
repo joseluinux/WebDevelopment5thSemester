@@ -3,27 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Mail, ArrowRight, ArrowLeft, Shield } from "lucide-react";
-import { authService } from "@/services/auth.service";
 import { Button } from "@/app/components/ui/Button";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setIsPending(true);
-    try {
-      await authService.forgotPassword(email);
+    // Simula envio
+    setTimeout(() => {
       setSent(true);
-    } catch (err) {
-      setError((err as { message: string }).message ?? "Erro ao enviar.");
-    } finally {
       setIsPending(false);
-    }
+    }, 800);
   };
 
   return (
@@ -57,12 +51,6 @@ export default function ForgotPasswordPage() {
               Enter the email address associated with your LUMEMEI account to
               receive reset instructions.
             </p>
-
-            {error && (
-              <div className="mb-4 px-4 py-3 rounded-lg bg-status-error/10 border border-status-error/30 text-status-error text-sm">
-                {error}
-              </div>
-            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

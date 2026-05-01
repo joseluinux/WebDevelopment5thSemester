@@ -25,14 +25,15 @@ export function Hero() {
         {/* Subtitle */}
         <p className="text-on-surface-variant text-lg md:text-xl max-w-xl leading-relaxed">
           A plataforma definitiva para MEIs que buscam clareza financeira.
-          Transformamos seus dados em decisões lucrativas com inteligência preditiva.
+          Transformamos seus dados em decisões lucrativas com inteligência
+          preditiva.
         </p>
 
         {/* CTAs */}
         <div className="flex flex-wrap gap-6 pt-4">
           <Link
             href="/register"
-            className="px-8 py-4 rounded-xl bg-linear-to-br from-primary-container to-primary text-on-primary font-bold text-lg hover:brightness-110 transition-all glow-primary active:scale-[0.98]"
+            className="px-8 py-4 rounded-xl bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] text-[#002979] font-bold text-lg hover:brightness-110 transition-all glow-primary active:scale-[0.98]"
           >
             Analisar Agora
           </Link>
@@ -47,7 +48,7 @@ export function Hero() {
 
       {/* Right — Hero Abstract Visual */}
       <div className="md:w-2/5 relative">
-        <div className="relative w-full aspect-square glass-card rounded-4xl border border-outline-variant/10 overflow-hidden flex items-center justify-center">
+        <div className="relative w-full aspect-square glass-card ghost-border rounded-4xl overflow-hidden flex items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt="Abstract 3D digital visualization"
@@ -57,8 +58,12 @@ export function Hero() {
           <div className="relative z-10 w-4/5 h-4/5 flex flex-col justify-between p-8">
             <div className="space-y-2">
               <div className="h-1 w-12 bg-primary rounded-full"></div>
-              <div className="text-3xl font-headline font-bold text-primary">R$ 12.450,00</div>
-              <div className="text-xs text-on-surface-variant uppercase tracking-widest">Faturamento Mensal</div>
+              <div className="text-3xl font-headline font-bold text-primary">
+                R$ 12.450,00
+              </div>
+              <div className="text-xs text-on-surface-variant uppercase tracking-widest">
+                Faturamento Mensal
+              </div>
             </div>
             <div className="h-32 w-full flex items-end gap-1">
               <div className="bg-primary/20 w-full h-[40%] rounded-t-sm"></div>
@@ -71,12 +76,14 @@ export function Hero() {
         </div>
 
         {/* Floating Element */}
-        <div className="absolute -bottom-6 -left-12 p-6 glass-card rounded-2xl border border-outline-variant/20 shadow-2xl flex items-center gap-4">
+        <div className="absolute -bottom-6 -left-12 p-6 glass-card ghost-border rounded-2xl shadow-2xl flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-tertiary-container/30 flex items-center justify-center text-tertiary">
             <span className="material-symbols-outlined">auto_graph</span>
           </div>
           <div>
-            <div className="text-xs text-on-surface-variant">Lucro Projetado</div>
+            <div className="text-xs text-on-surface-variant">
+              Lucro Projetado
+            </div>
             <div className="text-lg font-bold text-on-surface">+24.5%</div>
           </div>
         </div>

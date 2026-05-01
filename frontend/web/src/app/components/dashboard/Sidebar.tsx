@@ -16,7 +16,6 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { useAuth } from "@/hooks/useAuth";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -31,7 +30,6 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { logout } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -98,15 +96,15 @@ export function Sidebar() {
             Support
           </span>
         </Link>
-        <button
-          onClick={logout}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-muted hover:text-status-error hover:bg-status-error/10 text-sm transition-colors w-full"
+        <Link
+          href="/login"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-muted hover:text-status-error hover:bg-status-error/10 text-sm transition-colors"
         >
           <LogOut className="w-4 h-4" />
           <span className="uppercase tracking-wider text-xs font-semibold">
             Sign Out
           </span>
-        </button>
+        </Link>
       </div>
     </aside>
   );

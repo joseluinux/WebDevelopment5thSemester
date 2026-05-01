@@ -1,21 +1,8 @@
 "use client";
 
-import { Bell, Grid3X3, Search, ChevronDown } from "lucide-react";
-import { useMeiContext } from "@/context";
-import { useAuthContext } from "@/context";
+import { Bell, Grid3X3, Search } from "lucide-react";
 
 export function TopBar() {
-  const { meis, activeMei, setActiveMei } = useMeiContext();
-  const { user } = useAuthContext();
-
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-    : "?";
-
   return (
     <header className="fixed top-0 left-48 right-0 h-14 z-30 flex items-center px-6 gap-4 bg-obsidian-surface/60 backdrop-blur-glass border-b border-obsidian-elevated">
       {/* Search */}
@@ -42,42 +29,15 @@ export function TopBar() {
           <Grid3X3 className="w-4 h-4" />
         </button>
 
-        {/* Context Switcher (multi-MEI) */}
-        <div className="relative group">
-          <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-elevated hover:border-accent/40 transition-colors text-sm text-on-surface">
-            <span className="w-2 h-2 rounded-full bg-status-success shrink-0" />
-            <span className="font-medium max-w-[120px] truncate">
-              {activeMei?.name ?? "Selecionar MEI"}
-            </span>
-            <ChevronDown className="w-3.5 h-3.5 text-on-muted" />
-          </button>
-
-          {/* Dropdown */}
-          {meis.length > 1 && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-obsidian-popover rounded-xl border border-obsidian-elevated shadow-obsidian opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              {meis.map((mei) => (
-                <button
-                  key={mei.id}
-                  onClick={() => setActiveMei(mei.id)}
-                  className="flex items-center gap-2 w-full px-4 py-3 text-sm text-on-surface hover:bg-obsidian-elevated transition-colors first:rounded-t-xl last:rounded-b-xl"
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      mei.id === activeMei?.id
-                        ? "bg-accent"
-                        : "bg-obsidian-highest"
-                    }`}
-                  />
-                  {mei.name}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* MEI Name */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-elevated text-sm text-on-surface">
+          <span className="w-2 h-2 rounded-full bg-status-success shrink-0" />
+          <span className="font-medium">Meu MEI</span>
         </div>
 
         {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent font-bold text-xs shrink-0">
-          {initials}
+          U
         </div>
       </div>
     </header>

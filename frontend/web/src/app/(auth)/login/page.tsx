@@ -2,165 +2,144 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/app/components/ui/Button";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const { login, isPending, error } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [isPending, setIsPending] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login({ email, password });
+    setIsPending(true);
+    router.push("/dashboard");
   };
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      {/* Brand */}
-      <div className="text-center mb-8">
-        <p className="text-accent font-display font-bold text-xl tracking-tight">
-          MEI ORACLE
-        </p>
-        <p className="text-on-muted text-xs tracking-[0.2em] uppercase mt-1">
+    <div className="w-full max-w-110 relative">
+      {/* Ambient Glows */}
+      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-tertiary/5 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* Identity */}
+      <div className="text-center mb-10">
+        <h1 className="font-headline text-3xl font-bold tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] mb-2">
+          LUMEMEI
+        </h1>
+        <p className="text-on-surface-variant font-medium tracking-tight text-sm uppercase">
           Prism Intelligence Access
         </p>
       </div>
 
       {/* Card */}
-      <div className="bg-obsidian-card rounded-modal border border-obsidian-elevated p-8 shadow-obsidian">
-        <h1 className="font-display text-2xl font-bold text-on-surface mb-1">
-          Bem-vindo de volta
-        </h1>
-        <p className="text-on-muted text-sm mb-6">
-          Acesse sua central de inteligência financeira.
-        </p>
+      <div className="glass-card-auth ghost-border rounded-xl p-8 md:p-10 shadow-2xl relative z-10">
+        <div className="mb-8">
+          <h2 className="font-headline text-2xl font-bold text-on-surface mb-1">
+            Bem-vindo de volta
+          </h2>
+          <p className="text-on-surface-variant text-sm">
+            Acesse sua central de inteligência financeira.
+          </p>
+        </div>
 
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-lg bg-status-error/10 border border-status-error/30 text-status-error text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Email */}
-          <div>
-            <label className="block text-on-muted text-xs uppercase tracking-widest mb-2 font-semibold">
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-widest text-on-surface-variant/80 ml-1">
               E-mail
             </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-muted" />
+            <div className="relative group">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors">
+                alternate_email
+              </span>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nome@exemplo.com"
                 required
-                className="w-full bg-obsidian-elevated border border-obsidian-highest rounded-lg pl-10 pr-4 py-3 text-sm text-on-surface placeholder-on-muted/60 outline-none focus:border-accent/60 transition-colors"
+                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
               />
             </div>
           </div>
 
           {/* Password */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-on-muted text-xs uppercase tracking-widest font-semibold">
+          <div className="space-y-2">
+            <div className="flex justify-between items-end">
+              <label className="block text-xs font-semibold uppercase tracking-widest text-on-surface-variant/80 ml-1">
                 Senha
               </label>
               <Link
                 href="/forgot-password"
-                className="text-on-muted text-xs uppercase tracking-widest hover:text-accent transition-colors"
+                className="text-[10px] font-bold text-primary/70 hover:text-primary transition-colors uppercase tracking-wider"
               >
                 Esqueceu?
               </Link>
             </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-muted" />
+            <div className="relative group">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors">
+                lock
+              </span>
               <input
-                type={showPassword ? "text" : "password"}
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full bg-obsidian-elevated border border-obsidian-highest rounded-lg pl-10 pr-10 py-3 text-sm text-on-surface placeholder-on-muted/60 outline-none focus:border-accent/60 transition-colors"
+                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-muted hover:text-on-surface transition-colors"
-                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
             </div>
           </div>
 
-          <Button
+          {/* Submit */}
+          <button
             type="submit"
-            variant="primary"
-            size="lg"
-            isLoading={isPending}
-            icon={<ArrowRight className="w-4 h-4" />}
-            iconPosition="right"
-            className="w-full"
+            disabled={isPending}
+            className="w-full prism-gradient text-on-primary-container font-headline px-8 py-4 rounded-xl bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] text-[#002979] font-bold text-lg hover:brightness-110 transition-all glow-primary active:scale-[0.98 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            Entrar
-          </Button>
+            <span>{isPending ? "Entrando..." : "Entrar"}</span>
+            <span className="material-symbols-outlined text-lg">
+              arrow_forward
+            </span>
+          </button>
         </form>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-obsidian-elevated" />
-          <span className="text-on-muted text-xs uppercase tracking-widest">
-            ou continue com
-          </span>
-          <div className="flex-1 h-px bg-obsidian-elevated" />
-        </div>
-
-        {/* Google OAuth (placeholder) */}
-        <button className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-obsidian-elevated hover:border-obsidian-highest bg-obsidian-elevated hover:bg-obsidian-highest transition-colors text-sm text-on-surface">
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              fill="#4285F4"
-            />
-            <path
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              fill="#34A853"
-            />
-            <path
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              fill="#FBBC05"
-            />
-            <path
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              fill="#EA4335"
-            />
-          </svg>
-          Conta Google
-        </button>
       </div>
 
-      <p className="text-center text-on-muted text-sm mt-6">
-        Ainda não possui conta?{" "}
-        <Link
-          href="/register"
-          className="text-accent hover:text-accent-light transition-colors font-semibold"
-        >
-          Criar Cadastro
-        </Link>
-      </p>
-
-      <p className="text-center text-on-muted/40 text-xs mt-4 flex items-center justify-center gap-1">
-        <Lock className="w-3 h-3" />
-        ENCRYPTED SESSION
-      </p>
+      {/* Footer Actions */}
+      <div className="mt-8 text-center space-y-4">
+        <p className="text-sm text-on-surface-variant/60">
+          Ainda não possui conta?{" "}
+          <Link
+            href="/register"
+            className="text-primary font-bold hover:underline decoration-primary/30 underline-offset-4 ml-1"
+          >
+            Criar Cadastro
+          </Link>
+        </p>
+        <div className="flex items-center justify-center gap-6 pt-4">
+          <Link
+            href="#"
+            className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/30 hover:text-on-surface-variant transition-colors"
+          >
+            Termos
+          </Link>
+          <span className="w-1 h-1 bg-outline-variant/20 rounded-full" />
+          <Link
+            href="#"
+            className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/30 hover:text-on-surface-variant transition-colors"
+          >
+            Privacidade
+          </Link>
+          <span className="w-1 h-1 bg-outline-variant/20 rounded-full" />
+          <Link
+            href="#"
+            className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/30 hover:text-on-surface-variant transition-colors"
+          >
+            Suporte
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

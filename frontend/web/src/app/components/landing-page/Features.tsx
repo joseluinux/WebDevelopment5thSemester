@@ -8,7 +8,8 @@ export function Features() {
             Controle absoluto da sua jornada empreendedora
           </h2>
           <p className="text-on-surface-variant leading-relaxed">
-            Não é apenas sobre números, é sobre liberdade. Nossa tecnologia elimina a adivinhação financeira.
+            Não é apenas sobre números, é sobre liberdade. Nossa tecnologia
+            elimina a adivinhação financeira.
           </p>
         </div>
         <div className="flex gap-2">
@@ -27,12 +28,17 @@ export function Features() {
         <div className="md:col-span-8 group relative rounded-4xl bg-surface-container-low p-10 overflow-hidden transition-all hover:bg-surface-container duration-500">
           <div className="relative z-10 flex flex-col h-full justify-between">
             <div className="w-16 h-16 rounded-2xl bg-primary-container/10 flex items-center justify-center text-primary mb-8">
-              <span className="material-symbols-outlined text-3xl">insights</span>
+              <span className="material-symbols-outlined text-3xl">
+                insights
+              </span>
             </div>
             <div>
-              <h3 className="font-headline text-2xl font-bold mb-4">Análise em Tempo Real</h3>
+              <h3 className="font-headline text-2xl font-bold mb-4">
+                Análise em Tempo Real
+              </h3>
               <p className="text-on-surface-variant max-w-md">
-                Conecte suas contas e veja sua margem de lucro real ser calculada instantaneamente a cada transação.
+                Conecte suas contas e veja sua margem de lucro real ser
+                calculada instantaneamente a cada transação.
               </p>
             </div>
           </div>
@@ -49,11 +55,14 @@ export function Features() {
         {/* Small Card 1 — col-span-4 */}
         <div className="md:col-span-4 rounded-4xl bg-surface-container-low p-10 transition-all hover:bg-surface-container duration-500 border border-transparent hover:border-outline-variant/10">
           <div className="w-16 h-16 rounded-2xl bg-tertiary-container/10 flex items-center justify-center text-tertiary mb-8">
-            <span className="material-symbols-outlined text-3xl">shield_person</span>
+            <span className="material-symbols-outlined text-3xl">
+              shield_person
+            </span>
           </div>
           <h3 className="font-headline text-2xl font-bold mb-4">Privacidade</h3>
           <p className="text-on-surface-variant">
-            Criptografia de nível bancário para garantir que seus dados financeiros pertençam apenas a você.
+            Criptografia de nível bancário para garantir que seus dados
+            financeiros pertençam apenas a você.
           </p>
         </div>
 
@@ -64,19 +73,23 @@ export function Features() {
           </div>
           <h3 className="font-headline text-2xl font-bold mb-4">Agilidade</h3>
           <p className="text-on-surface-variant">
-            Sem formulários complexos. Responda 5 perguntas e tenha seu diagnóstico completo.
+            Sem formulários complexos. Responda 5 perguntas e tenha seu
+            diagnóstico completo.
           </p>
         </div>
 
         {/* Medium Card — col-span-8 */}
-        <div className="md:col-span-8 rounded-4xl bg-linear-to-br from-surface-container-low to-surface-container-highest/20 p-10 flex items-center justify-between overflow-hidden">
+        <div className="md:col-span-8 rounded-4xl bg-linear-to-br from-surface-container-low to-surface-container-highest/20 p-10 flex items-center justify-between overflow-hidden transition-all hover:bg-surface-container duration-500">
           <div className="max-w-xs">
-            <h3 className="font-headline text-2xl font-bold mb-4">Relatórios MEI Automáticos</h3>
+            <h3 className="font-headline text-2xl font-bold mb-4">
+              Relatórios MEI Automáticos
+            </h3>
             <p className="text-on-surface-variant">
-              DASN-SIMEI simplificada. Exportamos tudo o que você precisa para estar em dia com a Receita.
+              DASN-SIMEI simplificada. Exportamos tudo o que você precisa para
+              estar em dia com a Receita.
             </p>
           </div>
-          <div className="hidden sm:block recessed-well w-64 h-40 rounded-2xl p-4 border border-outline-variant/5">
+          <div className="hidden sm:block recessed-well w-64 h-40 rounded-2xl p-4 border border-outline-variant/10">
             <div className="space-y-3">
               <div className="h-2 w-3/4 bg-surface-variant rounded-full"></div>
               <div className="h-2 w-1/2 bg-surface-variant rounded-full"></div>
@@ -87,4 +100,4 @@ export function Features() {
       </div>
     </section>
   );
-}
+}
