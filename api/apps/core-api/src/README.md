@@ -87,11 +87,43 @@ Intended contents: Commands & Queries (CQRS handlers), DTOs, Application Service
 
 ```
 Core.Domain/
-├── Entities/      ← aggregate roots and domain entities (e.g. User, Order)
-└── Interfaces/    ← repository contracts, domain service interfaces
+├── Entities/
+│   ├── User.cs               ← platform account (email, passwordHash)
+│   ├── Mei.cs                ← MEI business registration (CNPJ, CNAE, annualLimit, plan)
+│   ├── Employee.cs           ← employee linked to a Mei (salary, charges, contractType)
+│   ├── Product.cs            ← product/service catalog (cost, price, desiredMargin, status)
+│   ├── Transaction.cs        ← financial transaction (type, category, amount, date)
+│   ├── Import.cs             ← bulk file import job (fileUri, status, processedRows, errors)
+│   ├── Document.cs           ← document/file linked to a Mei (title, content, fileUri)
+│   └── AiRecommendation.cs   ← AI-generated insight for a Mei (type, content, metadata)
+└── Interfaces/               ← repository contracts (not yet defined)
 ```
 
-Intended contents: Entities, Value Objects, Domain Events, Domain Exceptions, Business Invariants.
+**Domain — this is a MEI management platform.** MEI (Microempreendedor Individual) is a Brazilian simplified business registration. Each `User` can own one or more `Mei` businesses. All other entities belong to a `Mei`.
+
+#### Entity relationships
+
+```
+User ──< Mei ──< Employee
+              ├─< Product
+              ├─< Transaction >── Import
+              ├─< Document
+              ├─< Import
+              └─< AiRecommendation
+```
+
+| Entity | Key fields | Belongs to |
+|---|---|---|
+| `User` | `Id`, `Email`, `PasswordHash`, `Name` | — (root) |
+| `Mei` | `Id`, `UserId`, `Cnpj`, `Cnae`, `AnnualLimit`, `Plan` | `User` |
+| `Employee` | `Id`, `MeiId`, `Name`, `ContractType`, `Salary`, `Charges` | `Mei` |
+| `Product` | `Id`, `MeiId`, `Name`, `Cost`, `Price`, `DesiredMargin`, `Status` | `Mei` |
+| `Transaction` | `Id`, `MeiId`, `ImportId?`, `Type`, `Category`, `Amount`, `Date` | `Mei`, optionally `Import` |
+| `Import` | `Id`, `MeiId`, `FileUri`, `Status`, `TotalRows`, `ProcessedRows`, `Errors` | `Mei` |
+| `Document` | `Id`, `MeiId`, `Title`, `Content`, `FileUri` | `Mei` |
+| `AiRecommendation` | `Id`, `MeiId`, `Type`, `Content`, `Metadata` | `Mei` |
+
+> **Note**: entities were scaffold-generated and currently carry `namespace Core.Infrastructure` instead of `Core.Domain`. This should be corrected to match their physical location.
 
 ---
 
@@ -102,15 +134,18 @@ Intended contents: Entities, Value Objects, Domain Events, Domain Exceptions, Bu
 | SDK | `Microsoft.NET.Sdk` (class library) |
 | Role | Technical implementations: database, file system, external APIs |
 | References | `Core.Domain` |
-| NuGet | none (ORM not yet configured) |
+| NuGet | `Npgsql.EntityFrameworkCore.PostgreSQL 9.0.4` |
 
 ```
 Core.Infrastructure/
 └── Persistence/
-    └── Repositories/   ← implementations of IRepository interfaces from Core.Domain
+    ├── AppDbContext.cs     ← EF Core DbContext; all 8 DbSets configured
+    └── Repositories/       ← repository implementations (not yet created)
 ```
 
-Intended contents: EF Core `DbContext`, repository implementations, migrations, third-party API clients, caching adapters.
+**Database**: PostgreSQL (Supabase-hosted, evidenced by `auth`, `realtime`, and `storage` schema enums registered in `OnModelCreating`). Extensions in use: `uuid-ossp`, `pgcrypto`, `pg_stat_statements`, `vector`.
+
+`AppDbContext` registers all 8 entities as `DbSet<T>` and configures full column mappings, indexes, FK constraints, and default values via the Fluent API in `OnModelCreating`.
 
 ---
 
@@ -142,10 +177,10 @@ Intended for `WebApplicationFactory<>` tests that boot the full API pipeline.
 
 | Layer | Status |
 |---|---|
-| **CoreApi** | Scaffold only — default WeatherForecast minimal API |
-| **Core.Application** | Empty placeholder |
-| **Core.Domain** | Folders created, no entities or interfaces yet |
-| **Core.Infrastructure** | Persistence folder scaffolded, no ORM yet |
+| **CoreApi** | Scaffold only — default WeatherForecast minimal API, no real controllers yet |
+| **Core.Application** | Empty placeholder — no use cases defined |
+| **Core.Domain** | 8 entities defined; `Interfaces/` folder still empty |
+| **Core.Infrastructure** | `AppDbContext` configured with PostgreSQL (Npgsql); `Repositories/` empty |
 | **Tests** | Both projects created, placeholders only |
 
 ### Suggested next steps
