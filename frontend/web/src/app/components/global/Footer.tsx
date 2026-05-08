@@ -1,12 +1,17 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="bg-surface-container-lowest py-20 px-8 border-t border-outline-variant/5">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
         {/* Brand */}
         <div className="space-y-6">
-          <div className="text-2xl font-bold tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] font-headline uppercase">
+          <Link
+            href="/"
+            className="text-2xl font-bold tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] font-headline uppercase hover:opacity-80 transition-opacity block"
+          >
             LUMEMEI
-          </div>
+          </Link>
           <p className="text-on-surface-variant max-w-xs text-sm">
             Empoderando o microempreendedor individual com inteligência de dados
             e simplicidade radical.
@@ -29,19 +34,28 @@ export function Footer() {
             </div>
             <ul className="space-y-2 text-on-surface-variant text-sm">
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/#features"
+                >
                   Funcionalidades
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/#plans"
+                >
                   Planos
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/register"
+                >
                   Segurança
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -51,19 +65,28 @@ export function Footer() {
             </div>
             <ul className="space-y-2 text-on-surface-variant text-sm">
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/#features"
+                >
                   Blog
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/#features"
+                >
                   Guia MEI
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/login"
+                >
                   Suporte
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -73,19 +96,19 @@ export function Footer() {
             </div>
             <ul className="space-y-2 text-on-surface-variant text-sm">
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link className="hover:text-primary transition-colors" href="/">
                   Privacidade
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link className="hover:text-primary transition-colors" href="/">
                   Termos
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="#">
+                <Link className="hover:text-primary transition-colors" href="/">
                   Cookies
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

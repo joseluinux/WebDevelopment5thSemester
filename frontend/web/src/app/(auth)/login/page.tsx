@@ -1,21 +1,6 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isPending, setIsPending] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsPending(true);
-    router.push("/dashboard");
-  };
-
   return (
     <div className="w-full max-w-110 relative">
       {/* Ambient Glows */}
@@ -24,9 +9,12 @@ export default function LoginPage() {
 
       {/* Identity */}
       <div className="text-center mb-10">
-        <h1 className="font-headline text-3xl font-bold tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] mb-2">
+        <Link
+          href="/"
+          className="font-headline text-3xl font-bold tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] mb-2 block hover:opacity-80 transition-opacity"
+        >
           LUMEMEI
-        </h1>
+        </Link>
         <p className="text-on-surface-variant font-medium tracking-tight text-sm uppercase">
           Prism Intelligence Access
         </p>
@@ -43,7 +31,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form action="/dashboard" method="GET" className="space-y-6">
           {/* Email */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold uppercase tracking-widest text-on-surface-variant/80 ml-1">
@@ -55,8 +43,7 @@ export default function LoginPage() {
               </span>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                name="email"
                 placeholder="nome@exemplo.com"
                 required
                 className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
@@ -83,8 +70,7 @@ export default function LoginPage() {
               </span>
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                name="password"
                 placeholder="••••••••"
                 required
                 className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
@@ -95,10 +81,9 @@ export default function LoginPage() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={isPending}
-            className="w-full prism-gradient text-on-primary-container font-headline px-8 py-4 rounded-xl bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] text-[#002979] font-bold text-lg hover:brightness-110 transition-all glow-primary active:scale-[0.98 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full prism-gradient text-[#002979] font-headline font-bold py-4 rounded-lg shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
-            <span>{isPending ? "Entrando..." : "Entrar"}</span>
+            <span>Entrar</span>
             <span className="material-symbols-outlined text-lg">
               arrow_forward
             </span>
@@ -119,21 +104,21 @@ export default function LoginPage() {
         </p>
         <div className="flex items-center justify-center gap-6 pt-4">
           <Link
-            href="#"
+            href="/"
             className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/30 hover:text-on-surface-variant transition-colors"
           >
             Termos
           </Link>
           <span className="w-1 h-1 bg-outline-variant/20 rounded-full" />
           <Link
-            href="#"
+            href="/"
             className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/30 hover:text-on-surface-variant transition-colors"
           >
             Privacidade
           </Link>
           <span className="w-1 h-1 bg-outline-variant/20 rounded-full" />
           <Link
-            href="#"
+            href="/"
             className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/30 hover:text-on-surface-variant transition-colors"
           >
             Suporte

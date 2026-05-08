@@ -1,97 +1,80 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { Mail, ArrowRight, ArrowLeft, Shield } from "lucide-react";
-import { Button } from "@/app/components/ui/Button";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [isPending, setIsPending] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsPending(true);
-    // Simula envio
-    setTimeout(() => {
-      setSent(true);
-      setIsPending(false);
-    }, 800);
-  };
-
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="bg-obsidian-card rounded-modal border border-obsidian-elevated p-8 shadow-obsidian">
-        {/* Icon */}
-        <div className="w-12 h-12 rounded-xl bg-accent/15 border border-accent/20 flex items-center justify-center mx-auto mb-6">
-          <Shield className="w-6 h-6 text-accent" />
+    <div className="w-full max-w-110 relative">
+      {/* Ambient Glows */}
+      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-tertiary/5 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* Identity */}
+      <div className="text-center mb-10">
+        <Link
+          href="/"
+          className="font-headline text-3xl font-bold tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-[#6A8CF2] to-[#B4C5FF] mb-2 block hover:opacity-80 transition-opacity"
+        >
+          LUMEMEI
+        </Link>
+        <p className="text-on-surface-variant font-medium tracking-tight text-sm uppercase">
+          Recuperação de Acesso
+        </p>
+      </div>
+
+      {/* Card */}
+      <div className="glass-card-auth ghost-border rounded-xl p-8 md:p-10 shadow-2xl relative z-10">
+        <div className="mb-8">
+          <h2 className="font-headline text-2xl font-bold text-on-surface mb-1">
+            Redefinir Senha
+          </h2>
+          <p className="text-on-surface-variant text-sm">
+            Informe seu e-mail para receber as instruções de redefinição.
+          </p>
         </div>
 
-        {sent ? (
-          <div className="text-center">
-            <h1 className="font-display text-2xl font-bold text-on-surface mb-2">
-              E-mail enviado!
-            </h1>
-            <p className="text-on-muted text-sm mb-6">
-              Verifique sua caixa de entrada. O link expira em 30 minutos.
-            </p>
-            <Link href="/login">
-              <Button variant="secondary" size="md" className="w-full">
-                Voltar ao login
-              </Button>
-            </Link>
+        <form action="#" className="space-y-6">
+          {/* Email */}
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-widest text-on-surface-variant/80 ml-1">
+              E-mail
+            </label>
+            <div className="relative group">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors">
+                alternate_email
+              </span>
+              <input
+                type="email"
+                name="email"
+                placeholder="nome@exemplo.com"
+                required
+                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
+              />
+            </div>
           </div>
-        ) : (
-          <>
-            <h1 className="font-display text-2xl font-bold text-on-surface mb-1 text-center">
-              Recover Access
-            </h1>
-            <p className="text-on-muted text-sm mb-6 text-center">
-              Enter the email address associated with your LUMEMEI account to
-              receive reset instructions.
-            </p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-on-muted text-xs uppercase tracking-widest mb-2 font-semibold">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-muted" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="director@company.com"
-                    required
-                    className="w-full bg-obsidian-elevated border border-obsidian-highest rounded-lg pl-10 pr-4 py-3 text-sm text-on-surface placeholder-on-muted/60 outline-none focus:border-accent/60 transition-colors"
-                  />
-                </div>
-              </div>
+          {/* Submit */}
+          <button
+            type="submit"
+            className="w-full prism-gradient text-[#002979] font-headline font-bold py-4 rounded-lg shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <span>Enviar Link</span>
+            <span className="material-symbols-outlined text-lg">
+              arrow_forward
+            </span>
+          </button>
+        </form>
+      </div>
 
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={isPending}
-                icon={<ArrowRight className="w-4 h-4" />}
-                iconPosition="right"
-                className="w-full"
-              >
-                Send Reset Link
-              </Button>
-            </form>
-
-            <Link
-              href="/login"
-              className="flex items-center justify-center gap-2 mt-5 text-on-muted hover:text-on-surface text-sm transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Return to Login
-            </Link>
-          </>
-        )}
+      {/* Footer Actions */}
+      <div className="mt-8 text-center space-y-4">
+        <p className="text-sm text-on-surface-variant/60">
+          Lembrou a senha?{" "}
+          <Link
+            href="/login"
+            className="text-primary font-bold hover:underline decoration-primary/30 underline-offset-4 ml-1"
+          >
+            Voltar ao Login
+          </Link>
+        </p>
       </div>
     </div>
   );
