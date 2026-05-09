@@ -38,7 +38,7 @@ export const PLANS = {
     ],
   },
   pro: {
-    label: "Pro Oracle",
+    label: "Pro LUMEMEI",
     price: 49.9,
     features: [
       "Inteligência Preditiva de Caixa",
@@ -71,7 +71,7 @@ export const DASHBOARD_NAV = [
   { label: "Import", href: "/dashboard/import", icon: "Upload" },
   { label: "Products", href: "/dashboard/products", icon: "Package" },
   { label: "Employees", href: "/dashboard/employees", icon: "Users" },
-  { label: "Oracle AI", href: "/dashboard/oracle-ai", icon: "Brain" },
+  { label: "LUMEMEI AI", href: "/dashboard/oracle-ai", icon: "Brain" },
   { label: "Insights", href: "/dashboard/insights", icon: "TrendingUp" },
   { label: "Settings", href: "/dashboard/settings", icon: "Settings" },
 ] as const;
