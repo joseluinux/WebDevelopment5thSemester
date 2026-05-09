@@ -13,7 +13,11 @@ Core.Domain/
 │   ├── Import.cs
 │   ├── Document.cs
 │   └── AiRecommendation.cs
-└── Interfaces/           ← repository and service contracts (to be defined)
+├── Interfaces/           ← repository contracts (implemented by Core.Infrastructure)
+│   └── IUserRepository.cs
+└── Exceptions/           ← domain exceptions (thrown by application handlers)
+    ├── EmailAlreadyTakenException.cs
+    └── InvalidCredentialsException.cs
 ```
 
 ---
@@ -50,7 +54,7 @@ Platform account. Owns one or more `Mei` businesses.
 |---|---|---|
 | `Id` | `Guid` | Primary key (`uuid_generate_v4()`) |
 | `Email` | `string` | Unique login identifier |
-| `PasswordHash` | `string` | Hashed password |
+| `PasswordHash` | `string` | BCrypt-hashed password |
 | `Name` | `string?` | Display name |
 | `CreatedAt` | `DateTime` | Record creation timestamp |
 | `UpdatedAt` | `DateTime?` | Last update timestamp |
@@ -114,8 +118,8 @@ A financial movement (income or expense) for a `Mei`. Can originate from a bulk 
 |---|---|---|
 | `Id` | `Guid` | Primary key |
 | `MeiId` | `Guid` | FK → `Mei` |
-| `ImportId` | `Guid?` | FK → `Import` (nullable — set null on import deletion) |
-| `Type` | `string` | Movement direction (e.g. `income`, `expense`) |
+| `ImportId` | `Guid?` | FK → `Import` (set null on import deletion) |
+| `Type` | `string` | Movement direction (`income` / `expense`) |
 | `Category` | `string?` | Business category label |
 | `Amount` | `decimal` | Transaction value |
 | `Description` | `string?` | Free-text note |
@@ -136,7 +140,7 @@ A bulk file import job that creates multiple `Transaction` records from a file.
 | `Status` | `string` | Processing state (default: `pending`) |
 | `TotalRows` | `int?` | Total rows detected in the file |
 | `ProcessedRows` | `int?` | Rows successfully processed (default: `0`) |
-| `Errors` | `string?` | JSON array of row-level errors |
+| `Errors` | `string?` | JSONB array of row-level errors |
 | `CreatedAt` | `DateTime` | Record creation timestamp |
 | `UpdatedAt` | `DateTime?` | Last update timestamp |
 
@@ -170,18 +174,30 @@ An AI-generated insight or recommendation produced for a `Mei`.
 
 ---
 
-## `Interfaces/` — Pending
+## `Interfaces/`
 
-This folder will hold repository contracts that `Core.Infrastructure` must implement, following the Dependency Inversion Principle. Example contracts to define:
+Repository contracts that `Core.Infrastructure` must implement, following the Dependency Inversion Principle. `Core.Application` depends only on these interfaces — never on the concrete EF Core repositories.
+
+### `IUserRepository`
 
 ```csharp
-public interface IUserRepository { ... }
-public interface IMeiRepository { ... }
-public interface ITransactionRepository { ... }
-// etc.
+Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+Task AddAsync(User user, CancellationToken cancellationToken = default);
 ```
 
-`Core.Application` will depend only on these interfaces — never on the concrete infrastructure implementations.
+The nullable return type on `GetByEmailAsync` explicitly communicates that "not found" is a valid, expected outcome — not an exceptional case that should throw.
+
+---
+
+## `Exceptions/`
+
+Domain exceptions represent violations of business rules. They are thrown by `Core.Application` handlers and caught by `CoreApi` controllers, which map them to the appropriate HTTP status codes.
+
+### `EmailAlreadyTakenException`
+Thrown during registration when the submitted email is already in use. Controllers map this to `409 Conflict`.
+
+### `InvalidCredentialsException`
+Thrown during login when either the email is not found or the password does not match. A single exception type is used for both failure modes to prevent user-enumeration attacks — an attacker cannot tell from the error which field was wrong.
 
 ---
 
