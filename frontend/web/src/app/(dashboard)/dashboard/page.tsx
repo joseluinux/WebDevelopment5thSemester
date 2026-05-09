@@ -1,168 +1,236 @@
-import { Suspense } from "react";
-import { AlertTriangle, Brain } from "lucide-react";
-import {
-  transactionsService,
-  MOCK_DASHBOARD_STATS,
-  MOCK_CHART_DATA,
-} from "@/services/transactions.service";
-import { aiService } from "@/services/ai.service";
-import {
-  formatCurrency,
-  formatPercent,
-  calcAnnualLimitPercent,
-} from "@/utils/formatters";
-import { StatCard } from "@/app/components/ui/StatCard";
-import { ProgressBar } from "@/app/components/ui/ProgressBar";
-import { StatCardSkeleton } from "@/app/components/ui/Skeleton";
-import { RevenueChart } from "./_components/RevenueChart";
+import { formatCurrency, formatPercent } from "@/utils/formatters";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Dashboard — LUMEMEI",
 };
 
-// SSR: dados buscados no servidor
-async function getDashboardData() {
-  // TODO: passar meiId real do contexto/cookie quando backend estiver pronto
-  const meiId = "mei_01";
-  const [stats, chartData, insights] = await Promise.all([
-    transactionsService.getDashboardStats(meiId),
-    transactionsService.getChartData(meiId),
-    aiService.getInsights(meiId),
-  ]);
-  return { stats, chartData, insights };
-}
+const CHART_DATA = [
+  { month: "Jan", revPct: 45, expPct: 30 },
+  { month: "Feb", revPct: 50, expPct: 35 },
+  { month: "Mar", revPct: 60, expPct: 25 },
+  { month: "Apr", revPct: 55, expPct: 40 },
+  { month: "May", revPct: 80, expPct: 45 },
+  { month: "Jun", revPct: 90, expPct: 38 },
+];
 
-export default async function DashboardPage() {
-  const { stats, chartData, insights } = await getDashboardData();
-  const limitPct = calcAnnualLimitPercent(
-    stats.annualLimitUsed,
-    stats.annualLimit,
-  );
-
+export default function DashboardPage() {
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-display text-display-sm font-bold text-on-surface">
-          Financial Health
-        </h1>
-        <p className="text-on-muted text-sm mt-1">
-          Real-time overview of your MEI performance.
-        </p>
-      </div>
-
-      {/* MEI Annual Limit Radar */}
-      <div className="bg-obsidian-card rounded-card border border-obsidian-elevated p-5">
-        <div className="flex items-start gap-2 mb-3">
-          <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 shrink-0" />
-          <p className="text-on-muted text-xs uppercase tracking-widest font-semibold">
-            MEI Annual Limit Radar
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex justify-between items-end">
+        <div>
+          <h2 className="font-display text-4xl text-on-surface tracking-tight mb-1">
+            Financial Health
+          </h2>
+          <p className="font-body text-on-surface-variant text-sm">
+            Real-time overview of your MEI performance.
           </p>
         </div>
-        <div className="flex items-baseline gap-2 mb-1">
-          <span className="font-display text-2xl font-bold text-on-surface">
-            {formatCurrency(stats.annualLimitUsed)}
-          </span>
-          <span className="text-on-muted text-sm">
-            / {formatCurrency(stats.annualLimit)}
-          </span>
-        </div>
-        <ProgressBar
-          value={limitPct}
-          max={100}
-          color="accent"
-          className="my-3"
-        />
-        <div className="flex justify-between text-xs text-on-muted">
-          <span>Jan 1</span>
-          <span>Dec 31</span>
-        </div>
-        {limitPct > 80 && (
-          <p className="text-status-warning text-xs mt-2">
-            ⚠ Approaching annual limit. {limitPct.toFixed(0)}% utilized.
-            Consider transition scenarios to ME.
-          </p>
-        )}
       </div>
 
-      {/* Stat Cards */}
-      <Suspense
-        fallback={
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <StatCardSkeleton key={i} />
-            ))}
-          </div>
-        }
-      >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Total Revenue"
-            value={formatCurrency(stats.totalRevenue, { compact: true })}
-            change={stats.revenueChange}
-          />
-          <StatCard
-            label="Total Expenses"
-            value={formatCurrency(stats.totalExpenses, { compact: true })}
-            change={stats.expensesChange}
-          />
-          <StatCard
-            label="Net Profit"
-            value={formatCurrency(stats.netProfit, { compact: true })}
-            changeLabel="YTD Cumulative"
-            accent
-          />
-          <StatCard
-            label="Operating Margin"
-            value={formatPercent(stats.operatingMargin)}
-            changeLabel="This period"
-          />
-        </div>
-      </Suspense>
-
-      {/* Chart + Oracle Insight */}
-      <div className="grid lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 bg-obsidian-card rounded-card border border-obsidian-elevated p-5">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-on-muted text-xs uppercase tracking-widest font-semibold">
-              Revenue vs Expenses (6M)
+      {/* Bento Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8">
+        {/* MEI Limit Radar (full span) */}
+        <div className="col-span-1 md:col-span-12 bg-surface-container rounded-xl p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span
+                className="material-symbols-outlined text-tertiary text-sm"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                warning
+              </span>
+              <h3 className="font-label text-on-surface uppercase tracking-widest text-xs">
+                MEI Annual Limit Radar
+              </h3>
+            </div>
+            <p className="font-display text-3xl text-on-surface tracking-tight">
+              {formatCurrency(68500)}{" "}
+              <span className="text-lg text-on-surface-variant font-body tracking-normal">
+                / {formatCurrency(81000)}
+              </span>
             </p>
-            <button className="text-on-muted hover:text-on-surface text-lg leading-none">
-              ···
+            <p className="font-body text-tertiary text-sm mt-2">
+              Approaching annual limit. 84% utilized. Consider transition
+              scenarios to ME.
+            </p>
+          </div>
+          <div className="w-full md:w-1/2 mt-4 md:mt-0">
+            <div className="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden">
+              <div
+                className="h-full bg-linear-to-r from-tertiary-fixed-dim to-tertiary rounded-full"
+                style={{ width: "84%" }}
+              />
+            </div>
+            <div className="flex justify-between mt-2 font-body text-xs text-on-surface-variant">
+              <span>Jan 1</span>
+              <span>Dec 31</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Revenue */}
+        <div className="col-span-1 md:col-span-3 bg-surface-container rounded-xl p-6 flex flex-col justify-between h-48 hover:-translate-y-1 transition-transform duration-300">
+          <div>
+            <h4 className="font-label text-on-surface-variant uppercase tracking-widest text-[10px] mb-2">
+              Total Revenue
+            </h4>
+            <p className="font-display text-4xl text-on-surface tracking-tighter">
+              R$ 68.5k
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-primary-container text-sm font-body">
+            <span className="material-symbols-outlined text-sm">
+              trending_up
+            </span>
+            <span>+12.4% vs last mo</span>
+          </div>
+        </div>
+
+        {/* Total Expenses */}
+        <div className="col-span-1 md:col-span-3 bg-surface-container rounded-xl p-6 flex flex-col justify-between h-48 hover:-translate-y-1 transition-transform duration-300">
+          <div>
+            <h4 className="font-label text-on-surface-variant uppercase tracking-widest text-[10px] mb-2">
+              Total Expenses
+            </h4>
+            <p className="font-display text-4xl text-on-surface tracking-tighter">
+              R$ 32.1k
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-on-surface-variant text-sm font-body">
+            <span className="material-symbols-outlined text-sm">
+              trending_flat
+            </span>
+            <span>+2.1% vs last mo</span>
+          </div>
+        </div>
+
+        {/* Net Profit */}
+        <div className="col-span-1 md:col-span-3 bg-surface-container rounded-xl p-6 flex flex-col justify-between h-48 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary-container rounded-full blur-3xl opacity-10" />
+          <div>
+            <h4 className="font-label text-on-surface-variant uppercase tracking-widest text-[10px] mb-2">
+              Net Profit
+            </h4>
+            <p className="font-display text-4xl text-primary-fixed-dim tracking-tighter">
+              R$ 36.4k
+            </p>
+          </div>
+          <p className="font-body text-xs text-on-surface-variant mt-auto">
+            YTD Cumulative
+          </p>
+        </div>
+
+        {/* Operating Margin */}
+        <div className="col-span-1 md:col-span-3 bg-surface-container rounded-xl p-6 flex flex-col justify-between h-48 hover:-translate-y-1 transition-transform duration-300">
+          <div>
+            <h4 className="font-label text-on-surface-variant uppercase tracking-widest text-[10px] mb-2">
+              Operating Margin
+            </h4>
+            <p className="font-display text-4xl text-on-surface tracking-tighter">
+              53.1%
+            </p>
+          </div>
+          <div className="h-1 w-full bg-surface-container-lowest mt-4 rounded-full overflow-hidden">
+            <div className="h-full bg-primary-container w-[53%] rounded-full" />
+          </div>
+        </div>
+
+        {/* Revenue Chart (col-8) */}
+        <div className="col-span-1 md:col-span-8 bg-surface-container rounded-xl p-6 flex flex-col">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="font-label text-on-surface uppercase tracking-widest text-xs">
+              Revenue vs Expenses (6M)
+            </h3>
+            <button className="text-on-surface-variant hover:text-white transition-colors">
+              <span className="material-symbols-outlined text-sm">
+                more_horiz
+              </span>
             </button>
           </div>
-          <RevenueChart data={chartData} />
+          {/* Bar Chart */}
+          <div className="flex-1 flex items-end gap-2 sm:gap-4 md:gap-8 h-48 px-2 relative z-10">
+            {/* Y-axis lines */}
+            <div className="absolute left-0 bottom-0 w-full h-full flex flex-col justify-between z-0 pointer-events-none opacity-20">
+              <div className="w-full border-b border-outline-variant h-px" />
+              <div className="w-full border-b border-outline-variant h-px" />
+              <div className="w-full border-b border-outline-variant h-px" />
+            </div>
+            {CHART_DATA.map((d) => (
+              <div
+                key={d.month}
+                className="flex-1 flex flex-col justify-end items-center gap-2 group z-10"
+              >
+                <div className="w-full max-w-10 flex gap-1 items-end justify-center h-full">
+                  <div
+                    className="w-1/2 bg-surface-container-highest rounded-t-sm transition-all group-hover:opacity-80"
+                    style={{ height: `${d.expPct}%` }}
+                  />
+                  <div
+                    className="w-1/2 bg-primary-container rounded-t-sm transition-all group-hover:bg-primary"
+                    style={{ height: `${d.revPct}%` }}
+                  />
+                </div>
+                <span className="font-label text-[10px] text-on-surface-variant uppercase">
+                  {d.month}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-6 font-body text-xs text-on-surface-variant">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary-container" />
+              Revenue
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-surface-container-highest" />
+              Expenses
+            </div>
+          </div>
         </div>
 
-        {/* Oracle Insight Widget */}
-        <div className="lg:col-span-2 bg-obsidian-card rounded-card border border-obsidian-elevated p-5 flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-accent/15 border border-accent/20 flex items-center justify-center">
-              <Brain className="w-4 h-4 text-accent" />
+        {/* LUMEMEI Insight (col-4) */}
+        <div className="col-span-1 md:col-span-4 bg-surface-bright rounded-xl p-6 relative overflow-hidden flex flex-col">
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary-container rounded-full blur-[60px] opacity-20 pointer-events-none" />
+          <div className="flex items-center gap-3 mb-6 relative z-10">
+            <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center border border-outline-variant/20 shadow-lg">
+              <span
+                className="material-symbols-outlined text-primary-container"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                psychology
+              </span>
             </div>
-            <p className="text-on-surface font-semibold text-sm">
-              Oracle Insight
-            </p>
+            <h3 className="font-label text-on-surface uppercase tracking-widest text-xs">
+              LUMEMEI Insight
+            </h3>
           </div>
-          <p className="text-on-muted text-sm leading-relaxed">
-            {insights.recommendations[0]?.description ??
-              "Based on your current trajectory, you are highly likely to exceed the R$ 81k MEI threshold by late October."}
-          </p>
-          <div className="bg-obsidian-elevated rounded-lg p-4">
-            <p className="text-on-muted text-xs uppercase tracking-widest font-semibold mb-2">
-              Recommended Action
+          <div className="flex-1 relative z-10">
+            <p className="font-body text-on-surface text-sm leading-relaxed mb-4">
+              Based on your current trajectory, you are highly likely to exceed
+              the R$ 81k MEI threshold by late October.
             </p>
-            <p className="text-on-surface text-sm">
-              {insights.recommendations[0]?.title ??
-                "Schedule a consultation to prepare documentation for ME transition to avoid penalty taxes."}
-            </p>
+            <div className="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant/15">
+              <p className="font-label text-primary-fixed-dim text-xs uppercase tracking-widest mb-1">
+                Recommended Action
+              </p>
+              <p className="font-body text-on-surface-variant text-xs">
+                Schedule a consultation to prepare documentation for ME
+                transition to avoid penalty taxes.
+              </p>
+            </div>
           </div>
-          <a
+          <Link
             href="/dashboard/oracle-ai"
-            className="flex items-center gap-2 text-accent text-sm font-semibold hover:text-accent-light transition-colors mt-auto"
+            className="mt-6 w-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-outline-variant/20 py-3 rounded-lg font-label text-xs uppercase tracking-widest transition-colors flex justify-center items-center gap-2 relative z-10"
           >
-            View Full Analysis <span>→</span>
-          </a>
+            <span>View Full Analysis</span>
+            <span className="material-symbols-outlined text-base">
+              arrow_forward
+            </span>
+          </Link>
         </div>
       </div>
     </div>
