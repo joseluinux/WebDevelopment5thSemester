@@ -39,6 +39,7 @@ All dependency wiring happens here. Nothing is auto-discovered; every binding is
 | `IUserRepository` | Scoped | `UserRepository` |
 | `RegisterHandler` | Scoped | concrete class |
 | `LoginHandler` | Scoped | concrete class |
+| `GetMeHandler` | Scoped | concrete class |
 
 `JwtSettings` is registered as the concrete type (not `IOptions<JwtSettings>`) so handlers can take a plain dependency — keeping `Core.Application` free of `Microsoft.Extensions.Options` coupling and making unit tests trivial (`new JwtSettings { ... }`).
 
@@ -81,6 +82,21 @@ Request body (`RegisterDto`):
 |---|---|
 | Success | `201 Created` (empty body) |
 | Email already taken | `409 Conflict` `{ "error": "Email '...' is already taken." }` |
+
+### `GET /v1/auth/me` — requires `Authorization: Bearer <token>`
+
+Requires a valid JWT. `[Authorize]` causes ASP.NET Core to reject requests with a missing or invalid token with `401` before the action body runs.
+
+The subject claim is read defensively from both `ClaimTypes.NameIdentifier` (ASP.NET Core's default inbound-claim mapping of `sub`) and `JwtRegisteredClaimNames.Sub` (the raw claim), so the endpoint keeps working regardless of whether inbound claim mapping is enabled or disabled in the bearer pipeline.
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` `{ "id": "...", "name": "...", "email": "...", "createdAt": "..." }` |
+| Missing/invalid JWT | `401 Unauthorized` (auto, by `[Authorize]`) |
+| JWT valid, `sub` missing or not a `Guid` | `401 Unauthorized` `{ "error": "Invalid token subject." }` |
+| JWT valid, user deleted | `404 Not Found` `{ "error": "User with id '...' was not found." }` |
+
+---
 
 ### `POST /v1/auth/login`
 

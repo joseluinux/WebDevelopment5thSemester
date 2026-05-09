@@ -17,7 +17,8 @@ Core.Domain/
 │   └── IUserRepository.cs
 └── Exceptions/           ← domain exceptions (thrown by application handlers)
     ├── EmailAlreadyTakenException.cs
-    └── InvalidCredentialsException.cs
+    ├── InvalidCredentialsException.cs
+    └── UserNotFoundException.cs
 ```
 
 ---
@@ -182,10 +183,11 @@ Repository contracts that `Core.Infrastructure` must implement, following the De
 
 ```csharp
 Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 Task AddAsync(User user, CancellationToken cancellationToken = default);
 ```
 
-The nullable return type on `GetByEmailAsync` explicitly communicates that "not found" is a valid, expected outcome — not an exceptional case that should throw.
+The nullable return type on both `Get*` methods explicitly communicates that "not found" is a valid, expected outcome — not an exceptional case that should throw. `GetByIdAsync` is used by authenticated endpoints that already know which user to load (via the JWT `sub` claim).
 
 ---
 
@@ -198,6 +200,9 @@ Thrown during registration when the submitted email is already in use. Controlle
 
 ### `InvalidCredentialsException`
 Thrown during login when either the email is not found or the password does not match. A single exception type is used for both failure modes to prevent user-enumeration attacks — an attacker cannot tell from the error which field was wrong.
+
+### `UserNotFoundException`
+Thrown from authenticated use cases (e.g. `GetMeHandler`) when a valid JWT references a user that no longer exists (account deleted after the token was issued). This is intentionally distinct from `InvalidCredentialsException`: in an already-authenticated context the caller owns the token, so revealing "this id is gone" leaks nothing an attacker does not already know. Controllers map this to `404 Not Found`.
 
 ---
 

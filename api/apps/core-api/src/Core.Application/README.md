@@ -11,10 +11,14 @@ Core.Application/
         ├── Register/
         │   ├── RegisterCommand.cs
         │   └── RegisterHandler.cs
-        └── Login/
-            ├── LoginCommand.cs
-            ├── LoginHandler.cs
-            └── LoginResult.cs
+        ├── Login/
+        │   ├── LoginCommand.cs
+        │   ├── LoginHandler.cs
+        │   └── LoginResult.cs
+        └── GetMe/
+            ├── GetMeQuery.cs
+            ├── GetMeHandler.cs
+            └── GetMeResult.cs
 ```
 
 ---
@@ -94,6 +98,28 @@ Authenticates a user and issues a token pair.
 
 **Exceptions thrown:**
 - `InvalidCredentialsException` — credentials did not match (→ `401 Unauthorized`).
+
+---
+
+### `Auth/GetMe`
+
+Returns the public profile of the currently authenticated user.
+
+**Flow:**
+1. Look up the user by the id carried in `GetMeQuery` (extracted from the JWT `sub` claim by the controller).
+2. Throw `UserNotFoundException` if the row is missing (token valid, user deleted).
+3. Project to `GetMeResult`, explicitly omitting `PasswordHash`.
+
+**Input:** `GetMeQuery(Guid UserId)`
+
+**Output:** `GetMeResult(Guid Id, string? Name, string Email, DateTime CreatedAt)`
+
+The handler trusts the `UserId` in the query because it can only be populated after JwtBearer middleware has validated the token. Token validity is a presentation-layer concern — the handler never re-validates it.
+
+**Security note:** `GetMeResult` must never include `PasswordHash` (or any other secret field). Returning the raw `User` entity directly from a controller would serialize every property, including the BCrypt hash, into the response body.
+
+**Exceptions thrown:**
+- `UserNotFoundException` — user no longer exists (→ `404 Not Found`).
 
 ---
 

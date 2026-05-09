@@ -48,7 +48,10 @@ Implements `IUserRepository` (defined in `Core.Domain.Interfaces`).
 | Method | EF operation |
 |---|---|
 | `GetByEmailAsync` | `FirstOrDefaultAsync` — returns `null` when not found, matching the nullable contract |
+| `GetByIdAsync` | `FindAsync` — checks the EF change tracker before issuing SQL; returns `null` when the row does not exist |
 | `AddAsync` | `AddAsync` + `SaveChangesAsync` — stages and flushes in a single transaction |
+
+`FindAsync` is preferred over `FirstOrDefaultAsync(u => u.Id == id)` for primary-key lookups because it avoids a round-trip when the entity is already tracked in the same DbContext scope (e.g. earlier in the same request).
 
 The repository takes `AppDbContext` via constructor injection. It never returns EF-tracked objects outside its own methods — callers in `Core.Application` receive plain entity instances.
 
