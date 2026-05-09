@@ -24,6 +24,14 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
     }
 
+    // FindAsync uses the primary key directly and consults EF's change tracker
+    // first — if the entity is already loaded in this scope, no SQL is sent.
+    // Returns null when the row does not exist (matches the interface contract).
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+    }
+
     // EF Core unit-of-work pattern: AddAsync stages the entity in memory,
     // SaveChangesAsync flushes it to the database in a single transaction.
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
