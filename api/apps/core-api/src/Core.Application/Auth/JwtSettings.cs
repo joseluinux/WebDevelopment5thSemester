@@ -21,4 +21,10 @@ public class JwtSettings
     // access token has limited blast radius; the refresh token is what extends
     // the session.
     public int AccessTokenExpirationMinutes { get; set; } = 15;
+
+    // Refresh-token lifetime in days. Defines the maximum continuous session
+    // length: after this window the user must log in again with credentials.
+    // 30 days is a common middle ground between UX (don't ask too often) and
+    // security (limit the value of a stolen refresh token).
+    public int RefreshTokenExpirationDays { get; set; } = 30;
 }

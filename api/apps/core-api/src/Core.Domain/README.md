@@ -12,12 +12,15 @@ Core.Domain/
 │   ├── Transaction.cs
 │   ├── Import.cs
 │   ├── Document.cs
-│   └── AiRecommendation.cs
+│   ├── AiRecommendation.cs
+│   └── RefreshToken.cs
 ├── Interfaces/           ← repository contracts (implemented by Core.Infrastructure)
-│   └── IUserRepository.cs
+│   ├── IUserRepository.cs
+│   └── IRefreshTokenRepository.cs
 └── Exceptions/           ← domain exceptions (thrown by application handlers)
     ├── EmailAlreadyTakenException.cs
     ├── InvalidCredentialsException.cs
+    ├── InvalidRefreshTokenException.cs
     └── UserNotFoundException.cs
 ```
 
@@ -161,6 +164,22 @@ A document or file attached to a `Mei` (e.g. contracts, invoices, certificates).
 
 ---
 
+### `RefreshToken`
+A persisted server-side record that represents one active or revoked session. The client holds only the opaque token string; all validity metadata lives here.
+
+| Property | Type | Description |
+|---|---|---|
+| `Id` | `Guid` | Primary key (`uuid_generate_v4()`) |
+| `UserId` | `Guid` | FK → `User` (cascade delete) |
+| `Token` | `string` | Opaque CSPRNG string the client presents (unique index) |
+| `ExpiresAt` | `DateTime` | Absolute UTC expiry — checked on every refresh |
+| `IsRevoked` | `bool` | Soft-delete flag; rows are never physically deleted |
+| `CreatedAt` | `DateTime` | Record creation timestamp |
+
+Rows are never deleted. Keeping them enables audit trails ("when did this session end?") and detection of revoked-token reuse, which is a strong signal of token theft.
+
+---
+
 ### `AiRecommendation`
 An AI-generated insight or recommendation produced for a `Mei`.
 
@@ -189,6 +208,16 @@ Task AddAsync(User user, CancellationToken cancellationToken = default);
 
 The nullable return type on both `Get*` methods explicitly communicates that "not found" is a valid, expected outcome — not an exceptional case that should throw. `GetByIdAsync` is used by authenticated endpoints that already know which user to load (via the JWT `sub` claim).
 
+### `IRefreshTokenRepository`
+
+```csharp
+Task AddAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default);
+Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default);
+Task RevokeAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default);
+```
+
+Intentionally minimal — no `GetByUserAsync`, no `DeleteAsync`. The surface area is kept small until a real use case demands more. `RevokeAsync` performs a soft delete (sets `IsRevoked = true`, keeps the row).
+
 ---
 
 ## `Exceptions/`
@@ -200,6 +229,9 @@ Thrown during registration when the submitted email is already in use. Controlle
 
 ### `InvalidCredentialsException`
 Thrown during login when either the email is not found or the password does not match. A single exception type is used for both failure modes to prevent user-enumeration attacks — an attacker cannot tell from the error which field was wrong.
+
+### `InvalidRefreshTokenException`
+Thrown by `RefreshHandler` and `LogoutHandler` when a refresh-token operation is rejected. A single exception type covers three underlying causes: token not found, token expired, and token revoked. The reason mirrors `InvalidCredentialsException`: an attacker must not be able to tell from the error response whether a token ever existed, whether it expired naturally, or whether it was explicitly revoked. Controllers map this to `401 Unauthorized`.
 
 ### `UserNotFoundException`
 Thrown from authenticated use cases (e.g. `GetMeHandler`) when a valid JWT references a user that no longer exists (account deleted after the token was issued). This is intentionally distinct from `InvalidCredentialsException`: in an already-authenticated context the caller owns the token, so revealing "this id is gone" leaks nothing an attacker does not already know. Controllers map this to `404 Not Found`.

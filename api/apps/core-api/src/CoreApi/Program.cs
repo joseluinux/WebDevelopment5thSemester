@@ -2,6 +2,8 @@ using System.Text;
 using Core.Application.Auth;
 using Core.Application.UseCases.Auth.GetMe;
 using Core.Application.UseCases.Auth.Login;
+using Core.Application.UseCases.Auth.Logout;
+using Core.Application.UseCases.Auth.Refresh;
 using Core.Application.UseCases.Auth.Register;
 using Core.Domain.Interfaces;
 using Core.Infrastructure.Persistence;
@@ -97,9 +99,12 @@ builder.Services.AddAuthorization();
 // Repositories and handlers are registered manually (no MediatR). Each new use case
 // gets one extra line here — explicit and trivial to discover.
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<RegisterHandler>();
 builder.Services.AddScoped<LoginHandler>();
 builder.Services.AddScoped<GetMeHandler>();
+builder.Services.AddScoped<RefreshHandler>();
+builder.Services.AddScoped<LogoutHandler>();
 
 var app = builder.Build();
 

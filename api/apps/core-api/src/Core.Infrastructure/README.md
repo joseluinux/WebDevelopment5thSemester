@@ -8,8 +8,11 @@ Depends on: `Core.Domain`, `Core.Application` (for entity types), EF Core, Npgsq
 Core.Infrastructure/
 └── Persistence/
     ├── AppDbContext.cs
+    ├── Migrations/
+    │   └── 20260509191608_AddRefreshTokens.cs  ← adds the refresh_tokens table
     └── Repositories/
-        └── UserRepository.cs
+        ├── UserRepository.cs
+        └── RefreshTokenRepository.cs
 ```
 
 ---
@@ -30,6 +33,14 @@ Core.Infrastructure/
 | `Imports` | `imports` |
 | `Documents` | `documents` |
 | `AiRecommendations` | `ai_recommendations` |
+| `RefreshTokens` | `refresh_tokens` |
+
+### `refresh_tokens` model configuration
+
+- `token` column has a unique index — lookups by opaque string are O(log n) and duplicate tokens are impossible at the DB level.
+- `user_id` is indexed and carries `ON DELETE CASCADE` — deleting a user removes all their refresh tokens.
+- `is_revoked` defaults to `false`; `created_at` defaults to `CURRENT_TIMESTAMP`.
+- Rows are never physically deleted (soft revoke only).
 
 ### Notable model configuration
 
@@ -38,6 +49,18 @@ Core.Infrastructure/
 - `users.email` and `meis.cnpj` carry unique constraints enforced both at the database level and via domain exceptions.
 - Supabase platform enums (`auth.*`, `realtime.*`, `storage.*`) are registered via `HasPostgresEnum` so EF Core is aware of them without mapping them to C# types.
 - `AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true)` is set in `CoreApi/Program.cs` to keep `DateTime` columns working with `timestamp without time zone` columns.
+
+---
+
+## `Persistence/Repositories/RefreshTokenRepository`
+
+Implements `IRefreshTokenRepository`.
+
+| Method | EF operation |
+|---|---|
+| `AddAsync` | `AddAsync` + `SaveChangesAsync` — flush immediately; the token must exist in the DB before the client receives it |
+| `GetByTokenAsync` | `FirstOrDefaultAsync` on the unique-indexed `token` column |
+| `RevokeAsync` | Sets `IsRevoked = true`, calls `Update` (idempotent if already tracked), then `SaveChangesAsync` — row is kept for audit and reuse-detection |
 
 ---
 
@@ -54,6 +77,17 @@ Implements `IUserRepository` (defined in `Core.Domain.Interfaces`).
 `FindAsync` is preferred over `FirstOrDefaultAsync(u => u.Id == id)` for primary-key lookups because it avoids a round-trip when the entity is already tracked in the same DbContext scope (e.g. earlier in the same request).
 
 The repository takes `AppDbContext` via constructor injection. It never returns EF-tracked objects outside its own methods — callers in `Core.Application` receive plain entity instances.
+
+---
+
+## Migrations
+
+The schema was originally scaffolded from Supabase (no prior migration baseline). The first migration `AddRefreshTokens` adds only the `refresh_tokens` table — the Up/Down methods were trimmed to exclude the existing Supabase tables that would fail if re-created. The model snapshot is left intact so future migrations compute correct deltas.
+
+To apply:
+```bash
+dotnet ef database update -p src/Core.Infrastructure -s src/CoreApi
+```
 
 ---
 

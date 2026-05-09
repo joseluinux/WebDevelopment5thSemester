@@ -7,7 +7,8 @@ Core.UnitTests/
 └── Auth/
     ├── RegisterHandlerTests.cs   ← 2 tests for the Register use case
     ├── LoginHandlerTests.cs      ← 3 tests for the Login use case
-    └── GetMeHandlerTests.cs      ← 2 tests for the GetMe use case
+    ├── GetMeHandlerTests.cs      ← 2 tests for the GetMe use case
+    └── RefreshHandlerTests.cs    ← 3 tests for the Refresh use case
 ```
 
 ---
@@ -51,6 +52,20 @@ The last two tests assert the same exception type — this is the user-enumerati
 | `HandleAsync_UserNotFound_ThrowsUserNotFoundException` | Repository returns `null` (user deleted after token was issued) | Throws `UserNotFoundException` |
 
 `UserNotFoundException` is distinct from `InvalidCredentialsException` — in an authenticated context the caller owns the token, so a `404` carries no enumeration risk.
+
+---
+
+### `RefreshHandlerTests`
+
+Mocks both `IRefreshTokenRepository` and `IUserRepository`; `JwtSettings` is a hand-built POCO (no config file needed).
+
+| Test | Scenario | Expected |
+|---|---|---|
+| `HandleAsync_ValidRefreshToken_ReturnsNewPairAndRotatesOldToken` | Token found, not expired, not revoked | Returns new `AccessToken` and a **different** `RefreshToken` string; verifies `RevokeAsync` called once and `AddAsync` called once — both sides of rotation are asserted |
+| `HandleAsync_ExpiredToken_ThrowsInvalidRefreshTokenException` | `ExpiresAt` in the past, `IsRevoked = false` | Throws `InvalidRefreshTokenException`; verifies no write (`RevokeAsync` / `AddAsync` never called) |
+| `HandleAsync_RevokedToken_ThrowsInvalidRefreshTokenException` | `IsRevoked = true`, `ExpiresAt` in the future | Throws `InvalidRefreshTokenException`; verifies no write |
+
+The last two tests assert the same exception type and confirm no side effects — each failure mode independently aborts before any rotation write, which is the invariant that prevents partial rotation leaving two live tokens.
 
 ---
 

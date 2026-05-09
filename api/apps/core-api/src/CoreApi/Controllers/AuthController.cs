@@ -2,6 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Core.Application.UseCases.Auth.GetMe;
 using Core.Application.UseCases.Auth.Login;
+using Core.Application.UseCases.Auth.Logout;
+using Core.Application.UseCases.Auth.Refresh;
 using Core.Application.UseCases.Auth.Register;
 using Core.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
@@ -18,15 +20,21 @@ public class AuthController : ControllerBase
     private readonly RegisterHandler _registerHandler;
     private readonly LoginHandler _loginHandler;
     private readonly GetMeHandler _getMeHandler;
+    private readonly RefreshHandler _refreshHandler;
+    private readonly LogoutHandler _logoutHandler;
 
     public AuthController(
         RegisterHandler registerHandler,
         LoginHandler loginHandler,
-        GetMeHandler getMeHandler)
+        GetMeHandler getMeHandler,
+        RefreshHandler refreshHandler,
+        LogoutHandler logoutHandler)
     {
         _registerHandler = registerHandler;
         _loginHandler = loginHandler;
         _getMeHandler = getMeHandler;
+        _refreshHandler = refreshHandler;
+        _logoutHandler = logoutHandler;
     }
 
     [HttpPost("register")]
@@ -115,6 +123,53 @@ public class AuthController : ControllerBase
             return NotFound(new { error = ex.Message });
         }
     }
+
+    // POST /v1/auth/refresh — exchanges a still-valid refresh token for a NEW
+    // access/refresh-token pair (rotation).
+    //
+    // Intentionally NOT decorated with [Authorize]: the access token has
+    // probably already expired by the time the client calls /refresh, and the
+    // refresh token IS the credential. Demanding [Authorize] here would defeat
+    // the entire purpose of refresh tokens.
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] TokenDto dto, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _refreshHandler.HandleAsync(new RefreshCommand(dto.Token), cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidRefreshTokenException ex)
+        {
+            // 401 Unauthorized: refresh token unknown / expired / revoked.
+            // Same generic message regardless of which sub-cause hit — see
+            // InvalidRefreshTokenException for the security rationale.
+            return Unauthorized(new { error = ex.Message });
+        }
+    }
+
+    // POST /v1/auth/logout — invalidates the supplied refresh token.
+    //
+    // Protected with [Authorize] because the spec requires it: the caller must
+    // present a valid access token in addition to the refresh token. This
+    // raises the bar for an attacker (they need BOTH tokens to log a victim
+    // out, not just a stolen refresh token).
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] TokenDto dto, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _logoutHandler.HandleAsync(new LogoutCommand(dto.Token), cancellationToken);
+            // 200 OK with no body — the operation succeeded; nothing to return.
+            return Ok();
+        }
+        catch (InvalidRefreshTokenException ex)
+        {
+            // 401 Unauthorized: the refresh token was unknown or already revoked.
+            return Unauthorized(new { error = ex.Message });
+        }
+    }
 }
 
 // RegisterDto is a transport-layer object (JSON body shape) and belongs here in the
@@ -125,3 +180,8 @@ public record RegisterDto(string Name, string Email, string Password);
 // in the presentation layer because its shape is dictated by the HTTP API, not by
 // any domain concept.
 public record LoginDto(string Email, string Password);
+
+// Shared body shape for /refresh and /logout — both routes carry just the
+// opaque refresh-token string. Kept as one DTO because the wire format is
+// identical; if the routes diverge in the future, split them then.
+public record TokenDto(string Token);

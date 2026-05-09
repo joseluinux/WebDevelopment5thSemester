@@ -8,25 +8,31 @@ using Moq;
 namespace Core.UnitTests.Auth;
 
 // LoginHandler is unit-testable because every collaborator is an abstraction:
-//   - IUserRepository is mocked with Moq, so no database is needed.
+//   - IUserRepository / IRefreshTokenRepository are mocked with Moq, so no
+//     database is needed.
 //   - JwtSettings is a plain POCO, so we just hand-build one with valid values.
 public class LoginHandlerTests
 {
     private readonly Mock<IUserRepository> _repositoryMock = new();
+    private readonly Mock<IRefreshTokenRepository> _refreshTokenRepositoryMock = new();
     private readonly JwtSettings _jwtSettings = new()
     {
         // 32+ ASCII chars so the HMAC-SHA256 key meets the 256-bit minimum.
         Secret = "unit-test-secret-key-at-least-32-chars-long",
         Issuer = "LumeMEI.Tests",
         Audience = "LumeMEI.Tests.Clients",
-        AccessTokenExpirationMinutes = 15
+        AccessTokenExpirationMinutes = 15,
+        RefreshTokenExpirationDays = 30
     };
 
     private readonly LoginHandler _handler;
 
     public LoginHandlerTests()
     {
-        _handler = new LoginHandler(_repositoryMock.Object, _jwtSettings);
+        _handler = new LoginHandler(
+            _repositoryMock.Object,
+            _refreshTokenRepositoryMock.Object,
+            _jwtSettings);
     }
 
     [Fact]
@@ -55,6 +61,12 @@ public class LoginHandlerTests
         Assert.False(string.IsNullOrWhiteSpace(result.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(result.RefreshToken));
         Assert.True(result.ExpiresAt > DateTime.UtcNow);
+
+        // Assert: the refresh token was persisted exactly once (login MUST
+        // record it before responding, otherwise /refresh would never find it).
+        _refreshTokenRepositoryMock.Verify(
+            r => r.AddAsync(It.IsAny<RefreshToken>(), default),
+            Times.Once);
     }
 
     [Fact]

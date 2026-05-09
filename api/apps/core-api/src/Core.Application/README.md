@@ -5,7 +5,8 @@ The use-case layer. Orchestrates domain objects to fulfil the application's busi
 ```
 Core.Application/
 ├── Auth/
-│   └── JwtSettings.cs          ← strongly-typed POCO for JWT configuration
+│   ├── JwtSettings.cs          ← strongly-typed POCO for JWT configuration
+│   └── TokenFactory.cs         ← internal helper: JWT signing + CSPRNG refresh-token generation
 └── UseCases/
     └── Auth/
         ├── Register/
@@ -15,10 +16,17 @@ Core.Application/
         │   ├── LoginCommand.cs
         │   ├── LoginHandler.cs
         │   └── LoginResult.cs
-        └── GetMe/
-            ├── GetMeQuery.cs
-            ├── GetMeHandler.cs
-            └── GetMeResult.cs
+        ├── GetMe/
+        │   ├── GetMeQuery.cs
+        │   ├── GetMeHandler.cs
+        │   └── GetMeResult.cs
+        ├── Refresh/
+        │   ├── RefreshCommand.cs
+        │   ├── RefreshHandler.cs
+        │   └── RefreshResult.cs
+        └── Logout/
+            ├── LogoutCommand.cs
+            └── LogoutHandler.cs
 ```
 
 ---
@@ -53,8 +61,20 @@ A plain POCO that mirrors the `JwtSettings` section of `appsettings.json`.
 | `Issuer` | `string` | — | `iss` claim — identifies this API as the token issuer |
 | `Audience` | `string` | — | `aud` claim — identifies the intended token consumer |
 | `AccessTokenExpirationMinutes` | `int` | `15` | Lifetime of an access token |
+| `RefreshTokenExpirationDays` | `int` | `30` | Maximum session length before the user must log in again with credentials |
 
 `JwtSettings` lives in `Core.Application` so both the `LoginHandler` (which signs tokens) and `CoreApi` (which validates them) can share the exact same type — preventing issuer/audience drift between the two sides.
+
+---
+
+## `Auth/TokenFactory`
+
+`internal static` helper that centralises all cryptographic token production. Both `LoginHandler` and `RefreshHandler` call it — any drift in claim shape, signing algorithm, or random-number source between the two flows would be a hard-to-spot security regression.
+
+| Method | Returns | Notes |
+|---|---|---|
+| `CreateAccessToken(User, DateTime, JwtSettings)` | signed JWT string | Claims: `sub` (user id), `email`, `jti` (unique per token). Algorithm: HMAC-SHA256. |
+| `CreateRefreshToken()` | base64 string | 64 bytes from `RandomNumberGenerator` (CSPRNG). `System.Random` is explicitly forbidden — it is predictable. |
 
 ---
 
@@ -86,13 +106,15 @@ Authenticates a user and issues a token pair.
 **Flow:**
 1. Look up user by email — throw `InvalidCredentialsException` if not found.
 2. Verify the BCrypt hash — throw `InvalidCredentialsException` if it doesn't match.
-3. Generate a signed JWT access token (HMAC-SHA256, claims: `sub`, `email`, `jti`).
-4. Generate a 64-byte CSPRNG refresh token (opaque, base64-encoded).
+3. Mint an access token via `TokenFactory.CreateAccessToken`.
+4. Mint a refresh token via `TokenFactory.CreateRefreshToken`, persist the `RefreshToken` entity via `IRefreshTokenRepository.AddAsync` (persist before returning so the DB knows about the token before the client receives it).
 5. Return a `LoginResult` with both tokens and the absolute expiry timestamp.
 
 **Input:** `LoginCommand(string Email, string Password)`
 
 **Output:** `LoginResult(string AccessToken, string RefreshToken, DateTime ExpiresAt)`
+
+**Dependencies:** `IUserRepository`, `IRefreshTokenRepository`, `JwtSettings`.
 
 **Security note:** both "email not found" and "wrong password" throw the same `InvalidCredentialsException` with the same generic message. This prevents user-enumeration attacks where an attacker could learn which emails exist by observing different error responses.
 
@@ -120,6 +142,49 @@ The handler trusts the `UserId` in the query because it can only be populated af
 
 **Exceptions thrown:**
 - `UserNotFoundException` — user no longer exists (→ `404 Not Found`).
+
+---
+
+### `Auth/Refresh`
+
+Exchanges a still-valid refresh token for a new access/refresh-token pair (token rotation).
+
+**Flow:**
+1. Look up the token — throw `InvalidRefreshTokenException` if not found, expired, or revoked.
+2. Load the owning user by `UserId` — throw `InvalidRefreshTokenException` if the user no longer exists.
+3. Mint a new access token and a new refresh token via `TokenFactory`.
+4. **Revoke the old token first** — then persist the new one. Order is critical: if persistence fails after revocation the user must re-authenticate (safe). The opposite order would leave two valid tokens in circulation, defeating rotation.
+5. Return a `RefreshResult` (same shape as `LoginResult`).
+
+**Input:** `RefreshCommand(string Token)`
+
+**Output:** `RefreshResult(string AccessToken, string RefreshToken, DateTime ExpiresAt)`
+
+**Dependencies:** `IRefreshTokenRepository`, `IUserRepository`, `JwtSettings`.
+
+**Exceptions thrown:**
+- `InvalidRefreshTokenException` — token not found / expired / revoked, or owning user deleted (→ `401 Unauthorized`).
+
+---
+
+### `Auth/Logout`
+
+Invalidates a single refresh token (single-device logout — other sessions are unaffected).
+
+**Flow:**
+1. Look up the token — throw `InvalidRefreshTokenException` if not found or already revoked.
+2. Soft-revoke (set `IsRevoked = true`, keep the row).
+
+Note: expiration is not checked here — revoking an already-expired token is harmless and idempotent. Only "not found" and "already revoked" are rejected, as both signal an illegitimate call.
+
+**Input:** `LogoutCommand(string Token)`
+
+**Output:** none (void `Task`).
+
+**Dependencies:** `IRefreshTokenRepository`.
+
+**Exceptions thrown:**
+- `InvalidRefreshTokenException` — token unknown or already revoked (→ `401 Unauthorized`).
 
 ---
 

@@ -32,6 +32,9 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    // Persisted refresh tokens. Owned/queried only by the auth use cases.
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
+
    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -367,6 +370,55 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            // PK convention follows the rest of the schema: "<table>_pkey".
+            entity.HasKey(e => e.Id).HasName("refresh_tokens_pkey");
+
+            entity.ToTable("refresh_tokens");
+
+            // Unique index on Token: token strings are 64 random bytes encoded
+            // as base64, so collisions are vanishingly unlikely — but we still
+            // enforce uniqueness at the DB so a duplicate ever inserted by a
+            // bug surfaces as a constraint violation instead of silent reuse.
+            // Indexing also keeps GetByTokenAsync at O(log n).
+            entity.HasIndex(e => e.Token, "refresh_tokens_token_key").IsUnique();
+
+            // Foreign-key index — every RevokeAllForUser-style query, audit
+            // lookup, etc. filters by user id, so we keep this hot.
+            entity.HasIndex(e => e.UserId, "idx_refresh_tokens_user_id");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            // Tokens are 64-byte CSPRNG output base64-encoded — that yields
+            // ~88 chars. 512 leaves headroom in case the encoding ever changes
+            // (e.g. base64url with padding, or hex which is ~128 chars).
+            entity.Property(e => e.Token)
+                .HasMaxLength(512)
+                .HasColumnName("token");
+            entity.Property(e => e.ExpiresAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("expires_at");
+            entity.Property(e => e.IsRevoked)
+                .HasDefaultValue(false)
+                .HasColumnName("is_revoked");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+
+            // FK to Users.Id. Cascade delete: removing a user nukes their
+            // refresh tokens — there's no scenario where keeping orphan tokens
+            // is useful, and orphan auth records are a security liability.
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("refresh_tokens_user_id_fkey");
         });
 
         OnModelCreatingPartial(modelBuilder);

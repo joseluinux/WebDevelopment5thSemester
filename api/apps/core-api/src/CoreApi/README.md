@@ -10,7 +10,7 @@ CoreApi/
 ├── appsettings.json         ← default configuration (checked in, no secrets)
 ├── appsettings.Development.json  ← local overrides (git-ignored)
 ├── Controllers/
-│   └── AuthController.cs   ← POST /v1/auth/register, POST /v1/auth/login
+│   └── AuthController.cs   ← all /v1/auth/* endpoints
 └── Middlewares/             ← custom middleware (empty — reserved for future use)
 ```
 
@@ -37,9 +37,12 @@ All dependency wiring happens here. Nothing is auto-discovered; every binding is
 | `AppDbContext` | Scoped | `UseNpgsql(connectionString)` |
 | `JwtSettings` | Singleton | Bound from `appsettings.json → JwtSettings` section |
 | `IUserRepository` | Scoped | `UserRepository` |
+| `IRefreshTokenRepository` | Scoped | `RefreshTokenRepository` |
 | `RegisterHandler` | Scoped | concrete class |
 | `LoginHandler` | Scoped | concrete class |
 | `GetMeHandler` | Scoped | concrete class |
+| `RefreshHandler` | Scoped | concrete class |
+| `LogoutHandler` | Scoped | concrete class |
 
 `JwtSettings` is registered as the concrete type (not `IOptions<JwtSettings>`) so handlers can take a plain dependency — keeping `Core.Application` free of `Microsoft.Extensions.Options` coupling and making unit tests trivial (`new JwtSettings { ... }`).
 
@@ -63,6 +66,10 @@ Authentication **must** run before Authorization. The JWT validator uses the sam
 | Signing algorithm | HMAC-SHA256 |
 | `ClockSkew` | `TimeSpan.Zero` — expiry is exact, no slack |
 
+### Swagger / OpenAPI
+
+A global JWT Bearer security definition is registered via `AddSecurityDefinition` + `AddSecurityRequirement` (Microsoft.OpenApi 2.x API). The Swagger UI exposes an "Authorize" button so protected endpoints can be tested without an external client.
+
 ---
 
 ## `Controllers/AuthController`
@@ -83,19 +90,6 @@ Request body (`RegisterDto`):
 | Success | `201 Created` (empty body) |
 | Email already taken | `409 Conflict` `{ "error": "Email '...' is already taken." }` |
 
-### `GET /v1/auth/me` — requires `Authorization: Bearer <token>`
-
-Requires a valid JWT. `[Authorize]` causes ASP.NET Core to reject requests with a missing or invalid token with `401` before the action body runs.
-
-The subject claim is read defensively from both `ClaimTypes.NameIdentifier` (ASP.NET Core's default inbound-claim mapping of `sub`) and `JwtRegisteredClaimNames.Sub` (the raw claim), so the endpoint keeps working regardless of whether inbound claim mapping is enabled or disabled in the bearer pipeline.
-
-| Outcome | HTTP response |
-|---|---|
-| Success | `200 OK` `{ "id": "...", "name": "...", "email": "...", "createdAt": "..." }` |
-| Missing/invalid JWT | `401 Unauthorized` (auto, by `[Authorize]`) |
-| JWT valid, `sub` missing or not a `Guid` | `401 Unauthorized` `{ "error": "Invalid token subject." }` |
-| JWT valid, user deleted | `404 Not Found` `{ "error": "User with id '...' was not found." }` |
-
 ---
 
 ### `POST /v1/auth/login`
@@ -112,9 +106,63 @@ Request body (`LoginDto`):
 
 ---
 
+### `GET /v1/auth/me` — requires `Authorization: Bearer <token>`
+
+Requires a valid JWT. `[Authorize]` causes ASP.NET Core to reject requests with a missing or invalid token with `401` before the action body runs.
+
+The subject claim is read defensively from both `ClaimTypes.NameIdentifier` (ASP.NET Core's default inbound-claim mapping of `sub`) and `JwtRegisteredClaimNames.Sub` (the raw claim), so the endpoint keeps working regardless of whether inbound claim mapping is enabled or disabled in the bearer pipeline.
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` `{ "id": "...", "name": "...", "email": "...", "createdAt": "..." }` |
+| Missing/invalid JWT | `401 Unauthorized` (auto, by `[Authorize]`) |
+| JWT valid, `sub` missing or not a `Guid` | `401 Unauthorized` `{ "error": "Invalid token subject." }` |
+| JWT valid, user deleted | `404 Not Found` `{ "error": "User with id '...' was not found." }` |
+
+---
+
+### `POST /v1/auth/refresh`
+
+Exchanges a still-valid refresh token for a new access/refresh-token pair (rotation). Intentionally **not** decorated with `[Authorize]` — the access token has usually already expired by the time this is called, and the refresh token itself is the credential.
+
+Request body (`TokenDto`):
+```json
+{ "token": "<refresh token string>" }
+```
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` `{ "accessToken": "...", "refreshToken": "...", "expiresAt": "..." }` |
+| Token not found / expired / revoked | `401 Unauthorized` `{ "error": "Invalid refresh token." }` |
+
+---
+
+### `POST /v1/auth/logout` — requires `Authorization: Bearer <token>`
+
+Revokes the supplied refresh token. Protected with `[Authorize]` — the caller must present a valid access token in addition to the refresh token, raising the bar for an attacker who holds only one of the two.
+
+Request body (`TokenDto`):
+```json
+{ "token": "<refresh token string>" }
+```
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` (empty body) |
+| Missing/invalid JWT | `401 Unauthorized` (auto, by `[Authorize]`) |
+| Refresh token unknown or already revoked | `401 Unauthorized` `{ "error": "Invalid refresh token." }` |
+
+---
+
 ## DTOs
 
-`RegisterDto` and `LoginDto` are defined directly in `AuthController.cs` as `record` types. They are presentation-layer objects whose shape is dictated by the HTTP API, not by any domain concept. They must not be reused in `Core.Application` or `Core.Domain`.
+All DTOs are defined as `record` types directly in `AuthController.cs`. They are presentation-layer objects whose shape is dictated by the HTTP API, not by any domain concept.
+
+| DTO | Used by |
+|---|---|
+| `RegisterDto(string Name, string Email, string Password)` | `POST /register` |
+| `LoginDto(string Email, string Password)` | `POST /login` |
+| `TokenDto(string Token)` | `POST /refresh` and `POST /logout` (same wire format) |
 
 ---
 
@@ -129,7 +177,8 @@ Request body (`LoginDto`):
     "Secret": "<min 32-char random string>",
     "Issuer": "LumeMEI.CoreApi",
     "Audience": "LumeMEI.Clients",
-    "AccessTokenExpirationMinutes": 15
+    "AccessTokenExpirationMinutes": 15,
+    "RefreshTokenExpirationDays": 30
   }
 }
 ```
