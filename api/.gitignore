@@ -1,0 +1,13 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+*.sln.DotSettings.user
+coverage.opencover.xml
+coverage.cobertura.xml
+appsettings.json
+appsettings.Development.json
