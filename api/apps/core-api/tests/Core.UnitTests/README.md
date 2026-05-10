@@ -9,8 +9,10 @@ Core.UnitTests/
 │   ├── LoginHandlerTests.cs      ← 3 tests for the Login use case
 │   ├── GetMeHandlerTests.cs      ← 2 tests for the GetMe use case
 │   └── RefreshHandlerTests.cs    ← 3 tests for the Refresh use case
-└── Meis/
-    └── MeiHandlerTests.cs        ← 3 tests covering the MEI CRUD security surface
+├── Meis/
+│   └── MeiHandlerTests.cs        ← 3 tests covering the MEI CRUD security surface
+└── Transactions/
+    └── CreateTransactionHandlerTests.cs  ← 3 tests for CreateTransaction
 ```
 
 ---
@@ -80,6 +82,30 @@ Tests are distributed across `CreateMeiHandler` and `GetMeiHandler`. The two own
 | `CreateMeiHandler_HandleAsync_ValidData_CallsAddAsyncOnce` | `CreateMeiHandler` | No pre-existing MEIs; valid command | `AddAsync` called once; returned `MeiResult.Id` is non-empty and fields match the command |
 | `GetMeiHandler_HandleAsync_MeiNotFound_ThrowsMeiNotFoundException` | `GetMeiHandler` | Repository returns `null` | Throws `MeiNotFoundException` — not `UnauthorizedAccessException` — so callers can distinguish a genuine miss from an ownership violation |
 | `GetMeiHandler_HandleAsync_DifferentOwner_ThrowsUnauthorizedAccessException` | `GetMeiHandler` | Row exists but `mei.UserId` ≠ `query.UserId` | Throws `UnauthorizedAccessException`; confirms multi-tenant boundary — any authenticated user guessing another user's GUID must not receive the row |
+
+---
+
+### `CreateTransactionHandlerTests`
+
+Mocks both `ITransactionRepository` and `IMeiRepository`. Tests confirm the critical ordering: ownership is checked before type validation, so a malicious caller probing another user's MEI always gets `403`, never a helpful type-error hint.
+
+| Test | Scenario | Expected |
+|---|---|---|
+| `HandleAsync_ValidData_CallsAddAsyncOnce` | Caller owns the MEI, `type = "income"` | `AddAsync` called once; `TransactionResult` has correct `MeiId`, `Type`, `Amount` and a non-empty `Id` |
+| `HandleAsync_MeiOwnedByDifferentUser_ThrowsUnauthorizedAccessException` | MEI exists but `mei.UserId ≠ command.UserId` | Throws `UnauthorizedAccessException`; `AddAsync` never called — handler aborted before touching the transactions table |
+| `HandleAsync_InvalidType_ThrowsInvalidTransactionTypeException` | Caller owns the MEI, `type = "transfer"` | Throws `InvalidTransactionTypeException`; `AddAsync` never called |
+
+---
+
+## Smoke Tests
+
+An end-to-end bash script exercises the full transactions surface against a running API:
+
+```
+apps/scripts/tests/test-transactions.sh
+```
+
+Steps: register (tolerates 409 on reruns) → login → create MEI with unique CNPJ → create 3 transactions → assert list length (3 total, 2 income) → update amount → assert amount in GET → delete → assert 404 on deleted.
 
 ---
 

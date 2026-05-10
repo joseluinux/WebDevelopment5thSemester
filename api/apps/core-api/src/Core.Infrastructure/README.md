@@ -13,7 +13,8 @@ Core.Infrastructure/
     └── Repositories/
         ├── UserRepository.cs
         ├── RefreshTokenRepository.cs
-        └── MeiRepository.cs
+        ├── MeiRepository.cs
+        └── TransactionRepository.cs
 ```
 
 ---
@@ -78,6 +79,20 @@ Implements `IMeiRepository`.
 | `DeleteAsync` | Attach stub → `Remove` → `SaveChangesAsync` | Avoids a SELECT round-trip; cascade FKs handle dependent rows |
 
 The stub-delete pattern: a `Mei { Id = id }` entity is attached (only the PK is populated) and immediately removed, so EF emits a `DELETE WHERE id = @id` without first fetching the row. This is safe because ownership is already verified by the application-layer handler before `DeleteAsync` is called.
+
+---
+
+## `Persistence/Repositories/TransactionRepository`
+
+Implements `ITransactionRepository`.
+
+| Method | EF operation | Notes |
+|---|---|---|
+| `GetAllByMeiIdAsync` | `AsNoTracking().Where(…).OrderByDescending(…).ToListAsync` | Chained optional `Where` predicates — each `null` filter is simply skipped; EF coalesces them into a single `WHERE` clause. Sorted newest date first, then by `CreatedAt` desc. |
+| `GetByIdAsync` | `FindAsync` | Change-tracker aware; entity returned tracked so `UpdateAsync` can mutate and save without re-attaching |
+| `AddAsync` | `AddAsync` + `SaveChangesAsync` | |
+| `UpdateAsync` | `Update` + `SaveChangesAsync` | Idempotent whether entity is tracked or detached |
+| `DeleteAsync` | `FindAsync` → `Remove` → `SaveChangesAsync` | Finds the entity first (reuses the instance already in the tracker if loaded earlier) to avoid a tracker conflict that would arise from attaching a stub alongside the already-tracked entity |
 
 ---
 

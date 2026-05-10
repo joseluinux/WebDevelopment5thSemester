@@ -44,6 +44,23 @@ Core.Application/
         └── DeleteMei/
             ├── DeleteMeiCommand.cs
             └── DeleteMeiHandler.cs
+    └── Transactions/
+        ├── TransactionResult.cs        ← shared safe DTO for all transaction use cases
+        ├── GetTransactions/
+        │   ├── GetTransactionsQuery.cs
+        │   └── GetTransactionsHandler.cs
+        ├── GetTransaction/
+        │   ├── GetTransactionQuery.cs
+        │   └── GetTransactionHandler.cs
+        ├── CreateTransaction/
+        │   ├── CreateTransactionCommand.cs
+        │   └── CreateTransactionHandler.cs
+        ├── UpdateTransaction/
+        │   ├── UpdateTransactionCommand.cs
+        │   └── UpdateTransactionHandler.cs
+        └── DeleteTransaction/
+            ├── DeleteTransactionCommand.cs
+            └── DeleteTransactionHandler.cs
 ```
 
 ---
@@ -292,6 +309,93 @@ Hard-deletes a MEI after existence and ownership checks. Cascade FKs in `AppDbCo
 **Exceptions thrown:**
 - `MeiNotFoundException` → `404`
 - `UnauthorizedAccessException` → `403`
+
+---
+
+---
+
+## Transaction Use Cases
+
+Transactions are nested under their parent MEI. Every handler performs a **two-level ownership check**:
+1. Load the parent MEI — `MeiNotFoundException` if missing, `UnauthorizedAccessException` if owned by someone else (→ 403).
+2. For single-resource operations, load the transaction — `TransactionNotFoundException` for both "doesn't exist" and "exists under a different MEI" (cross-MEI probe resistance).
+
+All handlers inject both `IMeiRepository` and `ITransactionRepository`.
+
+### Shared DTO — `TransactionResult`
+
+```
+TransactionResult(Guid Id, Guid MeiId, string Type, string? Category,
+                  decimal Amount, DateOnly Date, string? Description,
+                  DateTime CreatedAt, DateTime? UpdatedAt)
+```
+
+`MeiId` is included so clients building per-MEI dashboards can attribute rows without extra round-trips. `ImportId` is intentionally absent — it's infrastructure state, not product-facing data. The `Mei` navigation property chain (`Transaction → Mei → User → PasswordHash`) means returning the entity directly would leak credentials; a narrow DTO makes that impossible.
+
+---
+
+### `Transactions/GetTransactions`
+
+Lists all transactions for a MEI, with optional chained filters.
+
+**Filters (all optional):** `From DateOnly`, `To DateOnly`, `Type string`, `Category string` — any `null` means "skip this filter".
+
+**Input:** `GetTransactionsQuery(Guid MeiId, Guid UserId, DateOnly? From, DateOnly? To, string? Type, string? Category)`
+**Output:** `IReadOnlyList<TransactionResult>` (newest date first, then by `CreatedAt` descending)
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403.
+
+---
+
+### `Transactions/GetTransaction`
+
+Fetches one transaction with the two-level security check.
+
+**Input:** `GetTransactionQuery(Guid MeiId, Guid UserId, Guid TransactionId)`
+**Output:** `TransactionResult`
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `TransactionNotFoundException` → 404 (covers both "doesn't exist" and "exists under a different MEI").
+
+---
+
+### `Transactions/CreateTransaction`
+
+Creates a transaction inside the caller's MEI.
+
+**Flow:**
+1. MEI ownership check (before type validation — a probe against someone else's MEI gets 403, not a helpful type-error).
+2. Type validation against `InvalidTransactionTypeException.ValidTypes`.
+3. Build entity with freshly generated `Guid` id.
+4. Persist and return projection.
+
+**Input:** `CreateTransactionCommand(Guid MeiId, Guid UserId, string Type, string? Category, decimal Amount, DateOnly Date, string? Description)`
+**Output:** `TransactionResult`
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `InvalidTransactionTypeException` → 400.
+
+---
+
+### `Transactions/UpdateTransaction`
+
+Updates all editable fields of a transaction. `Id`, `MeiId`, `ImportId`, and `CreatedAt` are immutable.
+
+**Flow:** MEI ownership → type validation → load transaction + cross-MEI guard → apply fields → persist.
+
+**Input:** `UpdateTransactionCommand(Guid MeiId, Guid UserId, Guid TransactionId, string Type, string? Category, decimal Amount, DateOnly Date, string? Description)`
+**Output:** `TransactionResult`
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `InvalidTransactionTypeException` → 400, `TransactionNotFoundException` → 404.
+
+---
+
+### `Transactions/DeleteTransaction`
+
+Hard-deletes a transaction after both security checks.
+
+**Input:** `DeleteTransactionCommand(Guid MeiId, Guid UserId, Guid TransactionId)`
+**Output:** none (void `Task`)
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `TransactionNotFoundException` → 404.
 
 ---
 

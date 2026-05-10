@@ -10,8 +10,9 @@ CoreApi/
 ├── appsettings.json         ← default configuration (checked in, no secrets)
 ├── appsettings.Development.json  ← local overrides (git-ignored)
 ├── Controllers/
-│   ├── AuthController.cs   ← all /v1/auth/* endpoints
-│   └── MeiController.cs    ← all /v1/meis/* endpoints
+│   ├── AuthController.cs        ← all /v1/auth/* endpoints
+│   ├── MeiController.cs         ← all /v1/meis/* endpoints
+│   └── TransactionsController.cs ← all /v1/meis/{meiId}/transactions/* endpoints
 └── Middlewares/             ← custom middleware (empty — reserved for future use)
 ```
 
@@ -50,6 +51,12 @@ All dependency wiring happens here. Nothing is auto-discovered; every binding is
 | `CreateMeiHandler` | Scoped | concrete class |
 | `UpdateMeiHandler` | Scoped | concrete class |
 | `DeleteMeiHandler` | Scoped | concrete class |
+| `ITransactionRepository` | Scoped | `TransactionRepository` |
+| `GetTransactionsHandler` | Scoped | concrete class |
+| `GetTransactionHandler` | Scoped | concrete class |
+| `CreateTransactionHandler` | Scoped | concrete class |
+| `UpdateTransactionHandler` | Scoped | concrete class |
+| `DeleteTransactionHandler` | Scoped | concrete class |
 
 `JwtSettings` is registered as the concrete type (not `IOptions<JwtSettings>`) so handlers can take a plain dependency — keeping `Core.Application` free of `Microsoft.Extensions.Options` coupling and making unit tests trivial (`new JwtSettings { ... }`).
 
@@ -258,6 +265,83 @@ Request body (`UpdateMeiDto`): `{ "name", "cnae"?, "annualLimit"?, "plan"? }` �
 | `UpdateMeiDto` | `Name`, `Cnae?`, `AnnualLimit?`, `Plan?` |
 
 Neither DTO has a `UserId` field — ownership is always derived from the JWT, never from the body.
+
+---
+
+---
+
+## `Controllers/TransactionsController`
+
+Base route: `v1/meis/{meiId:guid}/transactions`. `[Authorize]` at the class level. The `meiId` GUID route constraint causes ASP.NET Core to return `404` automatically for non-GUID values before any action runs.
+
+Every action uses the same `TryGetUserId()` helper (dual claim-name check) as the other controllers. Neither DTO carries `MeiId` or `UserId` — both come from the URL and JWT respectively.
+
+### `GET /v1/meis/{meiId}/transactions`
+
+All query-string filters are optional. Any omitted parameter is passed as `null` through to the repository, which skips it.
+
+Query params: `from` (`DateOnly`), `to` (`DateOnly`), `type` (`income`|`expense`), `category` (string)
+
+| Outcome | HTTP |
+|---|---|
+| Success | `200 OK` — JSON array of `TransactionResult`, newest first |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+
+### `GET /v1/meis/{meiId}/transactions/{id}`
+
+| Outcome | HTTP |
+|---|---|
+| Success | `200 OK` + `TransactionResult` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Transaction not found or belongs to a different MEI | `404` |
+
+### `POST /v1/meis/{meiId}/transactions`
+
+Request body (`CreateTransactionDto`): `{ "type", "category"?, "amount", "date", "description"? }`
+
+| Outcome | HTTP |
+|---|---|
+| Success | `201 Created` + `Location` header + `TransactionResult` body |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Invalid type value | `400 Bad Request` `{ "error": "Invalid transaction type '...'. Allowed: income, expense." }` |
+
+### `PUT /v1/meis/{meiId}/transactions/{id}`
+
+Request body (`UpdateTransactionDto`): `{ "type", "category"?, "amount", "date", "description"? }`
+
+| Outcome | HTTP |
+|---|---|
+| Success | `200 OK` + updated `TransactionResult` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Transaction not found or belongs to a different MEI | `404` |
+| Invalid type value | `400` |
+
+### `DELETE /v1/meis/{meiId}/transactions/{id}`
+
+| Outcome | HTTP |
+|---|---|
+| Success | `204 No Content` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Transaction not found or belongs to a different MEI | `404` |
+
+### DTOs
+
+| DTO | Fields |
+|---|---|
+| `CreateTransactionDto` | `Type`, `Category?`, `Amount`, `Date`, `Description?` |
+| `UpdateTransactionDto` | `Type`, `Category?`, `Amount`, `Date`, `Description?` |
+
+Neither DTO has a `MeiId` or `UserId` field — those come from the URL path and JWT.
 
 ---
 

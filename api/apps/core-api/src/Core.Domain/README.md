@@ -17,12 +17,15 @@ Core.Domain/
 ├── Interfaces/           ← repository contracts (implemented by Core.Infrastructure)
 │   ├── IUserRepository.cs
 │   ├── IRefreshTokenRepository.cs
-│   └── IMeiRepository.cs
+│   ├── IMeiRepository.cs
+│   └── ITransactionRepository.cs
 └── Exceptions/           ← domain exceptions (thrown by application handlers)
     ├── EmailAlreadyTakenException.cs
     ├── InvalidCredentialsException.cs
     ├── InvalidRefreshTokenException.cs
+    ├── InvalidTransactionTypeException.cs
     ├── MeiNotFoundException.cs
+    ├── TransactionNotFoundException.cs
     └── UserNotFoundException.cs
 ```
 
@@ -232,6 +235,20 @@ Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
 This interface intentionally does **not** enforce ownership. Filtering "user X owns MEI Y" is a use-case concern that belongs in the application layer, where the right exception (`MeiNotFoundException` vs `UnauthorizedAccessException`) can be chosen deliberately. A repository that silently hid rows by user id would make the ownership check invisible and easy to accidentally skip. `DeleteAsync` is a hard delete — no soft-delete flag on `Mei`.
 
+### `ITransactionRepository`
+
+```csharp
+Task<IReadOnlyList<Transaction>> GetAllByMeiIdAsync(
+    Guid meiId, DateOnly? from, DateOnly? to, string? type, string? category,
+    CancellationToken cancellationToken = default);
+Task<Transaction?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+Task AddAsync(Transaction transaction, CancellationToken cancellationToken = default);
+Task UpdateAsync(Transaction transaction, CancellationToken cancellationToken = default);
+Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+```
+
+`GetAllByMeiIdAsync` accepts optional filters (date range, type, category); any `null` parameter means "do not filter on this dimension". Ownership enforcement is not in the repository — the application layer verifies the caller owns the parent MEI before querying transactions.
+
 ---
 
 ## `Exceptions/`
@@ -246,6 +263,20 @@ Thrown during login when either the email is not found or the password does not 
 
 ### `InvalidRefreshTokenException`
 Thrown by `RefreshHandler` and `LogoutHandler` when a refresh-token operation is rejected. A single exception type covers three underlying causes: token not found, token expired, and token revoked. The reason mirrors `InvalidCredentialsException`: an attacker must not be able to tell from the error response whether a token ever existed, whether it expired naturally, or whether it was explicitly revoked. Controllers map this to `401 Unauthorized`.
+
+### `InvalidTransactionTypeException`
+Thrown when a Create or Update command carries a `Type` value other than `"income"` or `"expense"`. The exception class itself exposes the canonical list as a static field:
+
+```csharp
+public static readonly IReadOnlyList<string> ValidTypes = new[] { "income", "expense" };
+```
+
+Handlers import `ValidTypes` from here — not from a local constant — so adding a third type in the future requires only one change. Controllers map this to `400 Bad Request`.
+
+### `TransactionNotFoundException`
+Thrown when a transaction lookup by id finds no row **or** when the row exists but lives under a different MEI than the one in the URL. Both cases surface the same exception deliberately — an attacker probing for transaction ids across MEIs cannot tell "doesn't exist" from "exists under another MEI you don't own". Controllers map this to `404 Not Found`.
+
+(The parent-MEI ownership violation — correct MEI in the URL but owned by a different user — surfaces as `UnauthorizedAccessException` → `403`, consistent with the MEI ownership pattern.)
 
 ### `MeiNotFoundException`
 Thrown when a MEI lookup by id returns no row. Controllers map this to `404 Not Found`.
