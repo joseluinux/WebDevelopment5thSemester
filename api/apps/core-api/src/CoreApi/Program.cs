@@ -5,6 +5,8 @@ using Core.Application.UseCases.Auth.Login;
 using Core.Application.UseCases.Auth.Logout;
 using Core.Application.UseCases.Auth.Refresh;
 using Core.Application.UseCases.Auth.Register;
+using Core.Application.UseCases.Employees.CreateEmployee;
+using Core.Application.UseCases.Employees.GetEmployees;
 using Core.Application.UseCases.Meis.CreateMei;
 using Core.Application.UseCases.Meis.DeleteMei;
 using Core.Application.UseCases.Meis.GetMei;
@@ -144,6 +146,9 @@ builder.Services.AddScoped<GetProductHandler>();
 builder.Services.AddScoped<CreateProductHandler>();
 builder.Services.AddScoped<UpdateProductHandler>();
 builder.Services.AddScoped<DeleteProductHandler>();
+builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddScoped<GetEmployeesHandler>();
+builder.Services.AddScoped<CreateEmployeeHandler>();
 
 var app = builder.Build();
 
