@@ -1,5 +1,12 @@
-[phases.build]
-cmds = ["dotnet publish src/CoreApi/CoreApi.csproj -c Release -o out"]
+[phases.install]
+cmds = [
+  "dotnet restore src/CoreApi/CoreApi.csproj"
+]
 
-[deploy]
+[phases.build]
+cmds = [
+  "dotnet publish src/CoreApi/CoreApi.csproj -c Release -o out"
+]
+
+[start]
 cmd = "ASPNETCORE_URLS=http://0.0.0.0:$PORT ./out/CoreApi"
