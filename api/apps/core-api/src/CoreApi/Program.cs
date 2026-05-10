@@ -10,6 +10,11 @@ using Core.Application.UseCases.Meis.DeleteMei;
 using Core.Application.UseCases.Meis.GetMei;
 using Core.Application.UseCases.Meis.GetMeis;
 using Core.Application.UseCases.Meis.UpdateMei;
+using Core.Application.UseCases.Transactions.CreateTransaction;
+using Core.Application.UseCases.Transactions.DeleteTransaction;
+using Core.Application.UseCases.Transactions.GetTransaction;
+using Core.Application.UseCases.Transactions.GetTransactions;
+using Core.Application.UseCases.Transactions.UpdateTransaction;
 using Core.Application.UseCases.Users.DeleteAccount;
 using Core.Application.UseCases.Users.GetProfile;
 using Core.Application.UseCases.Users.UpdateProfile;
@@ -122,6 +127,12 @@ builder.Services.AddScoped<DeleteMeiHandler>();
 builder.Services.AddScoped<GetProfileHandler>();
 builder.Services.AddScoped<UpdateProfileHandler>();
 builder.Services.AddScoped<DeleteAccountHandler>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<GetTransactionsHandler>();
+builder.Services.AddScoped<GetTransactionHandler>();
+builder.Services.AddScoped<CreateTransactionHandler>();
+builder.Services.AddScoped<UpdateTransactionHandler>();
+builder.Services.AddScoped<DeleteTransactionHandler>();
 
 var app = builder.Build();
 
