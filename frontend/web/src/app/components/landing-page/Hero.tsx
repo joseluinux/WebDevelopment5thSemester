@@ -49,42 +49,51 @@ export function Hero() {
       {/* Right — Hero Abstract Visual */}
       <div className="md:w-2/5 relative">
         <div className="relative w-full aspect-square glass-card ghost-border rounded-4xl overflow-hidden flex items-center justify-center">
+          {/* Galaxy background — more visible */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt="Abstract 3D digital visualization"
-            className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay"
+            className="absolute inset-0 w-full h-full object-cover opacity-65"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuALLCGifm3oASAG-jE7-IiblTYWBKPY-ENaO-vNijYhpcHe3218VOVoT5jrBTm8ekInKv6EMb985pZYVWuE514pwqNlNGxuRoMNov66OjwI2gmQ4x4y7lDFshgRK5EEt0QtDthTtmm-XhitV3QCPCbtVnS7Tm-bn08V0ikZC8nBs4p2S2AYnKF4i1GpeK4TU3F6K7yiGTZtXFGfT77IEDC-e_YMpR8xJibf5iwmekk836GGmto0RxBK8XanT9mIvLsQHIKmbsiNq3s"
           />
-          <div className="relative z-10 w-4/5 h-4/5 flex flex-col justify-between p-8">
-            <div className="space-y-2">
-              <div className="h-1 w-12 bg-primary rounded-full"></div>
-              <div className="text-3xl font-headline font-bold text-primary">
+          {/* Dark overlay so text stays legible */}
+          <div className="absolute inset-0 bg-[#0d0c0f]/40" />
+
+          <div className="relative z-10 w-4/5 h-4/5 flex flex-col justify-between py-8">
+            {/* KPI */}
+            <div className="space-y-1">
+              <div className="h-0.5 w-10 bg-primary rounded-full mb-3"></div>
+              <div className="text-3xl font-headline font-bold text-white tracking-tight">
                 R$ 12.450,00
               </div>
-              <div className="text-xs text-on-surface-variant uppercase tracking-widest">
+              <div className="text-[10px] text-on-surface-variant/70 uppercase tracking-[0.2em] font-label">
                 Faturamento Mensal
               </div>
             </div>
-            <div className="h-32 w-full flex items-end gap-1">
-              <div className="bg-primary/20 w-full h-[40%] rounded-t-sm"></div>
-              <div className="bg-primary/40 w-full h-[60%] rounded-t-sm"></div>
-              <div className="bg-primary/60 w-full h-[85%] rounded-t-sm"></div>
-              <div className="bg-primary w-full h-[70%] rounded-t-sm"></div>
-              <div className="bg-primary/30 w-full h-[95%] rounded-t-sm"></div>
+
+            {/* Bar chart — muted blue-gray palette matching screenshot */}
+            <div className="h-36 w-full flex items-end gap-2">
+              <div className="flex-1 rounded-t bg-[#3d4358] h-[38%]" />
+              <div className="flex-1 rounded-t bg-[#4a5270] h-[56%]" />
+              <div className="flex-1 rounded-t bg-[#555f7a] h-[72%]" />
+              <div className="flex-1 rounded-t bg-[#7a8cba] h-[82%]" />
+              <div className="flex-1 rounded-t bg-[#464d65] h-[93%]" />
             </div>
           </div>
         </div>
 
         {/* Floating Element */}
-        <div className="absolute -bottom-6 -left-12 p-6 glass-card ghost-border rounded-2xl shadow-2xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-tertiary-container/30 flex items-center justify-center text-tertiary">
-            <span className="material-symbols-outlined">auto_graph</span>
+        <div className="absolute -bottom-6 -left-12 p-4 glass-card ghost-border rounded-2xl shadow-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center">
+            <span className="material-symbols-outlined text-primary text-xl">
+              show_chart
+            </span>
           </div>
           <div>
-            <div className="text-xs text-on-surface-variant">
+            <div className="text-[10px] text-on-surface-variant uppercase tracking-widest">
               Lucro Projetado
             </div>
-            <div className="text-lg font-bold text-on-surface">+24.5%</div>
+            <div className="text-base font-bold text-on-surface">+24.5%</div>
           </div>
         </div>
       </div>

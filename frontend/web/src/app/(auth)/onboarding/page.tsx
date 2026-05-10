@@ -1,359 +1,182 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRight, BarChart3, Shield, ChevronLeft } from "lucide-react";
-import { Button } from "@/app/components/ui/Button";
-import { useMeiContext } from "@/context";
-import { meiService } from "@/services/mei.service";
-
-const STEPS = [
-  "Identidade",
-  "Business DNA",
-  "Configuração",
-  "Pronto!",
-] as const;
-const CNAE_OPTIONS = [
-  "6201-5/00 Desenvolvimento de software",
-  "4712-1/00 Comércio",
-  "6204-0/00 Consultoria",
-  "8599-6/04 Treinamento",
-];
-const REVENUE_OPTIONS = [
-  { label: "Até R$ 40k", value: "0-40000", desc: "Micro Scale" },
-  { label: "R$ 40k – R$ 81k", value: "40000-81000", desc: "Standard MEI" },
-];
-
 export default function OnboardingPage() {
-  const router = useRouter();
-  const { refetch } = useMeiContext();
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState({
-    meiName: "",
-    cnpj: "",
-    cnae: "",
-    revenue: "",
-    employees: 1,
-  });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  const back = () => setStep((s) => Math.max(s - 1, 0));
-
-  const handleFinish = async () => {
-    setIsLoading(true);
-    try {
-      await meiService.create({
-        name: form.meiName || "Meu MEI",
-        cnpj: form.cnpj,
-        cnae: form.cnae,
-        annual_limit: 81000,
-        plan: "starter",
-      });
-      await refetch();
-      router.push("/dashboard");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-obsidian-bg flex">
-      {/* Left panel */}
-      <div className="hidden lg:flex w-1/2 bg-obsidian-surface flex-col justify-center px-16">
-        <p className="font-display font-bold text-4xl text-on-surface mb-4 tracking-tight">
-          MEI ORACLE
-        </p>
-        <p className="text-on-muted text-lg leading-relaxed mb-10">
-          Precision intelligence for the modern entrepreneur. Manage your fiscal
-          identity with obsidian clarity and geometric technicality.
-        </p>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-obsidian-card rounded-card p-5 border border-obsidian-elevated">
-            <BarChart3 className="w-5 h-5 text-accent mb-3" />
-            <p className="text-on-surface font-semibold text-sm">
-              CNAE Intelligence
-            </p>
-            <p className="text-on-muted text-xs mt-1">
-              Automated classification and regulatory mapping.
-            </p>
-          </div>
-          <div className="bg-obsidian-card rounded-card p-5 border border-obsidian-elevated">
-            <Shield className="w-5 h-5 text-accent mb-3" />
-            <p className="text-on-surface font-semibold text-sm">
-              Fiscal Security
-            </p>
-            <p className="text-on-muted text-xs mt-1">
-              Encrypted vault for high-value financial data.
-            </p>
+    <div className="min-h-screen flex w-full overflow-hidden">
+      {/* Left Panel — Editorial Visual Anchor */}
+      <div className="hidden md:flex md:w-1/2 relative items-center justify-center p-12 bg-surface-container-lowest overflow-hidden">
+        {/* Gradient Blobs */}
+        <div className="absolute top-[-10%] left-[-10%] w-125 h-125 bg-primary-container/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-100 h-100 bg-tertiary-container/5 rounded-full blur-[100px]" />
+
+        <div className="relative z-10 max-w-lg">
+          <h1 className="font-headline text-6xl font-black tracking-tighter text-white mb-6 leading-none uppercase">
+            LUMEMEI
+          </h1>
+          <p className="text-on-surface-variant text-xl leading-relaxed mb-8 font-light">
+            Precision intelligence for the modern entrepreneur. Manage your
+            fiscal identity with obsidian clarity and geometric technicality.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 bg-surface-container rounded-xl border border-white/5">
+              <span
+                className="material-symbols-outlined text-primary mb-3 block"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                analytics
+              </span>
+              <h3 className="font-headline font-bold text-white mb-1">
+                CNAE Intelligence
+              </h3>
+              <p className="text-sm text-on-surface-variant">
+                Automated classification and regulatory mapping.
+              </p>
+            </div>
+            <div className="p-6 bg-surface-container rounded-xl border border-white/5">
+              <span
+                className="material-symbols-outlined text-primary mb-3 block"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                shield_with_heart
+              </span>
+              <h3 className="font-headline font-bold text-white mb-1">
+                Fiscal Security
+              </h3>
+              <p className="text-sm text-on-surface-variant">
+                Encrypted vault for high-value financial data.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm">
-          {/* Progress */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-on-muted text-xs uppercase tracking-widest">
-                Step {String(step + 1).padStart(2, "0")} of{" "}
-                {String(STEPS.length).padStart(2, "0")}
-              </p>
-              <p className="text-on-surface font-display font-bold">
-                {STEPS[step]}
-              </p>
+      {/* Right Panel — Form Canvas */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 bg-surface-container-low relative">
+        {/* Mobile Brand */}
+        <div className="md:hidden absolute top-8 left-8">
+          <span className="font-headline text-xl font-black tracking-tighter text-white">
+            LUMEMEI
+          </span>
+        </div>
+
+        <div className="w-full max-w-110 space-y-8">
+          {/* Step Indicator */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-end mb-2">
+              <span className="font-label text-xs uppercase tracking-widest text-primary font-bold">
+                Step 02 of 04
+              </span>
+              <span className="font-headline text-2xl font-bold text-white">
+                Business DNA
+              </span>
             </div>
-            <div className="w-full h-1 bg-obsidian-elevated rounded-full overflow-hidden">
-              <div
-                className="h-full bg-accent-gradient rounded-full transition-all duration-500"
-                style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-              />
+            <div className="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+              <div className="h-full prism-gradient w-2/4 transition-all duration-500" />
             </div>
           </div>
 
-          {/* Step 0 — Identidade */}
-          {step === 0 && (
-            <div className="bg-obsidian-card rounded-modal border border-obsidian-elevated p-6 space-y-4 animate-fade-in">
-              <h2 className="font-display text-xl font-bold text-on-surface">
-                Identificação do MEI
-              </h2>
-              <div>
-                <label className="block text-on-muted text-xs uppercase tracking-widest mb-2 font-semibold">
-                  Nome do negócio
-                </label>
-                <input
-                  type="text"
-                  value={form.meiName}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, meiName: e.target.value }))
-                  }
-                  placeholder="Ex: TechNova Solutions"
-                  className="w-full bg-obsidian-elevated border border-obsidian-highest rounded-lg px-4 py-3 text-sm text-on-surface placeholder-on-muted/60 outline-none focus:border-accent/60 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-on-muted text-xs uppercase tracking-widest mb-2 font-semibold">
-                  CNPJ (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={form.cnpj}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, cnpj: e.target.value }))
-                  }
-                  placeholder="00.000.000/0001-00"
-                  className="w-full bg-obsidian-elevated border border-obsidian-highest rounded-lg px-4 py-3 text-sm text-on-surface placeholder-on-muted/60 outline-none focus:border-accent/60 transition-colors"
-                />
-              </div>
-              <Button
-                onClick={next}
-                variant="primary"
-                size="lg"
-                className="w-full"
-                icon={<ArrowRight className="w-4 h-4" />}
-                iconPosition="right"
-              >
-                Continue
-              </Button>
-            </div>
-          )}
-
-          {/* Step 1 — Business DNA */}
-          {step === 1 && (
-            <div className="bg-obsidian-card rounded-modal border border-obsidian-elevated p-6 space-y-4 animate-fade-in">
-              <h2 className="font-display text-xl font-bold text-on-surface">
-                Business DNA
-              </h2>
-
-              <div>
-                <label className="block text-on-muted text-xs uppercase tracking-widest mb-2 font-semibold">
+          {/* Form Card */}
+          <div className="bg-surface-container p-8 rounded-2xl border border-white/3 shadow-2xl">
+            <form action="/dashboard" method="GET" className="space-y-6">
+              {/* CNAE */}
+              <div className="space-y-2">
+                <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
                   Primary CNAE Activity
                 </label>
                 <div className="relative">
-                  <select
-                    value={form.cnae}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, cnae: e.target.value }))
-                    }
-                    className="w-full bg-obsidian-elevated border border-obsidian-highest rounded-lg px-4 py-3 text-sm text-on-surface outline-none focus:border-accent/60 transition-colors appearance-none"
-                  >
-                    <option value="">
-                      e.g. 6201-5/00 Development of software
-                    </option>
-                    {CNAE_OPTIONS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-sm">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    name="cnae"
+                    placeholder="e.g. 6201-5/00 Development of software"
+                    className="w-full bg-surface-container-lowest border-none rounded-lg py-4 pl-12 pr-4 text-sm text-on-surface focus:ring-1 focus:ring-primary/30 transition-all font-body"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-on-muted text-xs uppercase tracking-widest mb-2 font-semibold">
+              {/* Revenue Range */}
+              <div className="space-y-2">
+                <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
                   Annual Projected Revenue
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {REVENUE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() =>
-                        setForm((f) => ({ ...f, revenue: opt.value }))
-                      }
-                      className={`p-3 rounded-lg border text-left transition-colors ${
-                        form.revenue === opt.value
-                          ? "border-accent bg-accent/15 text-on-surface"
-                          : "border-obsidian-elevated bg-obsidian-elevated text-on-muted hover:border-obsidian-highest"
-                      }`}
-                    >
-                      <p className="font-semibold text-sm">{opt.label}</p>
-                      <p className="text-xs mt-0.5">{opt.desc}</p>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col items-start p-4 bg-surface-container-lowest rounded-lg border border-transparent text-left">
+                    <span className="text-xs font-headline font-bold text-on-surface mb-1">
+                      Up to R$ 40k
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant">
+                      Micro Scale
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-start p-4 bg-surface-container-lowest rounded-lg border border-primary/60 bg-primary/5 text-left">
+                    <span className="text-xs font-headline font-bold text-white mb-1">
+                      R$ 40k – R$ 81k
+                    </span>
+                    <span className="text-[10px] text-primary">
+                      Standard MEI
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-on-muted text-xs uppercase tracking-widest mb-2 font-semibold">
-                  Employee Count: {form.employees}
+              {/* Employee Count */}
+              <div className="space-y-2">
+                <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
+                  Employee Count
                 </label>
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
-                  value={form.employees}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      employees: Number(e.target.value),
-                    }))
-                  }
-                  className="w-full accent-accent"
-                />
+                <div className="flex items-center space-x-4 p-4 bg-surface-container-lowest rounded-lg">
+                  <span className="material-symbols-outlined text-on-surface-variant">
+                    person_add
+                  </span>
+                  <input
+                    type="range"
+                    name="employees"
+                    min="0"
+                    max="1"
+                    step="1"
+                    defaultValue="1"
+                    className="flex-1 accent-primary"
+                  />
+                  <span className="font-headline font-bold text-white text-sm">
+                    01
+                  </span>
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={back}
-                  variant="secondary"
-                  size="md"
-                  icon={<ChevronLeft className="w-4 h-4" />}
-                  className="flex-1"
-                >
-                  Voltar
-                </Button>
-                <Button
-                  onClick={next}
-                  variant="primary"
-                  size="md"
-                  icon={<ArrowRight className="w-4 h-4" />}
-                  iconPosition="right"
-                  className="flex-1"
+              {/* Actions */}
+              <div className="pt-4 flex flex-col gap-4">
+                <button
+                  type="submit"
+                  className="w-full py-4 prism-gradient text-[#002979] font-headline font-bold rounded-lg hover:shadow-[0_0_20px_rgba(106,140,242,0.3)] transition-all flex items-center justify-center gap-2"
                 >
                   Continue Analysis
-                </Button>
-              </div>
-
-              <button
-                onClick={next}
-                className="w-full text-center text-on-muted text-xs hover:text-on-surface transition-colors py-1"
-              >
-                SKIP FOR NOW
-              </button>
-            </div>
-          )}
-
-          {/* Step 2 — Configuração */}
-          {step === 2 && (
-            <div className="bg-obsidian-card rounded-modal border border-obsidian-elevated p-6 space-y-4 animate-fade-in">
-              <h2 className="font-display text-xl font-bold text-on-surface">
-                Quase lá!
-              </h2>
-              <p className="text-on-muted text-sm">
-                Seu perfil está configurado. Revise as informações antes de
-                finalizar.
-              </p>
-              <div className="bg-obsidian-elevated rounded-lg p-4 space-y-2 text-sm">
-                <Row label="Negócio" value={form.meiName || "—"} />
-                <Row label="CNPJ" value={form.cnpj || "—"} />
-                <Row label="CNAE" value={form.cnae || "—"} />
-                <Row label="Receita" value={form.revenue || "—"} />
-                <Row label="Funcionários" value={String(form.employees)} />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={back}
-                  variant="secondary"
-                  size="md"
-                  icon={<ChevronLeft className="w-4 h-4" />}
-                  className="flex-1"
+                  <span className="material-symbols-outlined text-lg">
+                    arrow_forward
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="w-full py-4 text-on-surface-variant font-label text-xs uppercase tracking-widest hover:text-white transition-colors"
                 >
-                  Voltar
-                </Button>
-                <Button
-                  onClick={next}
-                  variant="primary"
-                  size="md"
-                  icon={<ArrowRight className="w-4 h-4" />}
-                  iconPosition="right"
-                  className="flex-1"
-                >
-                  Confirmar
-                </Button>
+                  Skip for now
+                </button>
               </div>
-            </div>
-          )}
+            </form>
+          </div>
 
-          {/* Step 3 — Done */}
-          {step === 3 && (
-            <div className="bg-obsidian-card rounded-modal border border-obsidian-elevated p-6 text-center space-y-4 animate-fade-in">
-              <div className="w-16 h-16 rounded-full bg-status-success/15 border border-status-success/30 flex items-center justify-center mx-auto">
-                <span className="text-3xl">🎯</span>
-              </div>
-              <h2 className="font-display text-xl font-bold text-on-surface">
-                Pronto para decolar!
-              </h2>
-              <p className="text-on-muted text-sm">
-                Seu MEI foi configurado. Acesse o dashboard e comece a controlar
-                suas finanças.
-              </p>
-              <Button
-                onClick={handleFinish}
-                variant="primary"
-                size="lg"
-                isLoading={isLoading}
-                className="w-full"
-                icon={<ArrowRight className="w-4 h-4" />}
-                iconPosition="right"
-              >
-                Acessar Dashboard
-              </Button>
-            </div>
-          )}
-
-          <p className="text-center text-on-muted/40 text-xs mt-6">
-            BY CONTINUING, YOU AGREE TO THE LUMEMEI{" "}
-            <span className="underline cursor-pointer">TERMS OF PROTOCOL</span>{" "}
-            AND{" "}
-            <span className="underline cursor-pointer">
-              PRIVACY ARCHITECTURE
+          {/* Legal */}
+          <p className="text-center text-on-surface-variant/40 text-[10px] uppercase tracking-widest">
+            By continuing, you agree to the LUMEMEI{" "}
+            <span className="text-on-surface-variant/60 cursor-pointer hover:text-primary transition-colors">
+              Terms of Protocol
+            </span>{" "}
+            and{" "}
+            <span className="text-on-surface-variant/60 cursor-pointer hover:text-primary transition-colors">
+              Privacy Architecture
             </span>
-          </p>
-          <p className="text-center text-on-muted/30 text-xs mt-2 flex items-center justify-center gap-1">
-            <Shield className="w-3 h-3" /> L2 ENCRYPTED SESSION
           </p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between">
-      <span className="text-on-muted">{label}</span>
-      <span className="text-on-surface font-medium">{value}</span>
     </div>
   );
 }

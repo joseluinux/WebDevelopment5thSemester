@@ -149,10 +149,10 @@ export interface InsightData {
   costAnomaliesSeverity: "low" | "medium" | "high";
   systemEfficiency: number;
   chartData: { month: string; revenue: number; burnRate: number }[];
-  recommendations: OracleRecommendation[];
+  recommendations: LumemeiRecommendation[];
 }
 
-export interface OracleRecommendation {
+export interface LumemeiRecommendation {
   id: string;
   title: string;
   description: string;

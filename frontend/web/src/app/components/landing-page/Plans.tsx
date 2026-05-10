@@ -62,7 +62,7 @@ export function Plans() {
             </div>
             <div className="relative z-10">
               <div className="text-sm font-bold text-primary tracking-widest uppercase mb-4">
-                Pro Oracle
+                Pro LUMEMEI
               </div>
               <div className="flex items-baseline gap-1 mb-8">
                 <span className="text-4xl font-headline font-bold">

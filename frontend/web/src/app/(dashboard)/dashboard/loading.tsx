@@ -5,8 +5,8 @@ export default function DashboardLoading() {
     <div className="space-y-6 animate-pulse">
       {/* Header skeleton */}
       <div>
-        <div className="h-8 w-48 bg-obsidian-elevated rounded-lg mb-2" />
-        <div className="h-4 w-64 bg-obsidian-elevated rounded" />
+        <div className="h-8 w-48 bg-surface-container-highest rounded-lg mb-2" />
+        <div className="h-4 w-64 bg-surface-container-high rounded" />
       </div>
 
       {/* Stat cards */}
@@ -18,8 +18,8 @@ export default function DashboardLoading() {
 
       {/* Chart + widget */}
       <div className="grid lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 h-72 bg-obsidian-card rounded-card border border-obsidian-elevated" />
-        <div className="lg:col-span-2 h-72 bg-obsidian-card rounded-card border border-obsidian-elevated" />
+        <div className="lg:col-span-3 h-72 bg-surface-container rounded-xl" />
+        <div className="lg:col-span-2 h-72 bg-surface-container rounded-xl" />
       </div>
 
       {/* Table rows */}

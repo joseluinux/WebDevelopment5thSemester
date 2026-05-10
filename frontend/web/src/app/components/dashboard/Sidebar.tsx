@@ -2,30 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  CreditCard,
-  Upload,
-  Package,
-  Users,
-  Brain,
-  TrendingUp,
-  Settings,
-  HelpCircle,
-  LogOut,
-  Plus,
-} from "lucide-react";
-import { cn } from "@/lib/cn";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Transactions", href: "/dashboard/transactions", icon: CreditCard },
-  { label: "Import", href: "/dashboard/import", icon: Upload },
-  { label: "Products", href: "/dashboard/products", icon: Package },
-  { label: "Employees", href: "/dashboard/employees", icon: Users },
-  { label: "Oracle AI", href: "/dashboard/oracle-ai", icon: Brain },
-  { label: "Insights", href: "/dashboard/insights", icon: TrendingUp },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
+  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  {
+    label: "Transactions",
+    href: "/dashboard/transactions",
+    icon: "account_balance_wallet",
+  },
+  { label: "Import", href: "/dashboard/import", icon: "cloud_upload" },
+  { label: "Products", href: "/dashboard/products", icon: "inventory_2" },
+  { label: "Employees", href: "/dashboard/employees", icon: "badge" },
+  { label: "LUMEMEI AI", href: "/dashboard/oracle-ai", icon: "psychology" },
+  { label: "Insights", href: "/dashboard/insights", icon: "insights" },
+  { label: "Settings", href: "/dashboard/settings", icon: "settings" },
 ];
 
 export function Sidebar() {
@@ -37,75 +27,75 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-48 bg-obsidian-surface flex flex-col z-40">
+    <nav className="bg-[#141315] hidden md:flex flex-col h-full py-8 w-64 fixed left-0 top-0 z-50">
       {/* Logo */}
-      <div className="px-5 pt-6 pb-4">
-        <p className="text-on-surface font-display font-bold text-lg tracking-tight">
+      <div className="px-6 mb-8 flex flex-col items-start gap-1">
+        <Link
+          href="/dashboard"
+          className="text-2xl font-black text-white font-headline tracking-tighter uppercase hover:opacity-80 transition-opacity"
+        >
           LUMEMEI
-        </p>
-        <p className="text-on-muted text-xs mt-0.5">Fintech Obsidian</p>
+        </Link>
+        <span className="text-[10px] text-on-surface-variant font-label tracking-widest uppercase">
+          Fintech Obsidian
+        </span>
       </div>
 
-      {/* New Transaction CTA */}
-      <div className="px-4 mb-4">
+      {/* CTA */}
+      <div className="px-6 mb-8">
         <Link
           href="/dashboard/transactions?new=true"
-          className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent font-semibold text-sm transition-colors border border-accent/30"
+          className="w-full bg-linear-to-r from-primary to-primary-container text-white py-3 px-4 rounded-lg font-label font-medium text-sm flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(106,140,242,0.2)] transition-all duration-300"
         >
-          <Plus className="w-4 h-4" />
+          <span
+            className="material-symbols-outlined text-lg"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            add
+          </span>
           New Transaction
         </Link>
       </div>
 
-      {/* Nav items */}
-      <nav className="flex-1 px-3 space-y-0.5">
-        {NAV_ITEMS.map(({ label, href, icon: Icon }) => (
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-1 w-full">
+        {NAV_ITEMS.map(({ label, href, icon }) => (
           <Link
             key={href}
             href={href}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors group",
+            className={
               isActive(href)
-                ? "bg-accent/15 text-accent font-semibold border-l-2 border-accent pl-[10px]"
-                : "text-on-muted hover:text-on-surface hover:bg-obsidian-card",
-            )}
+                ? "bg-[#201F21] text-[#6A8CF2] border-r-2 border-[#6A8CF2] py-3 px-6 flex items-center gap-3 font-label uppercase tracking-widest text-[10px] transition-all duration-300 group"
+                : "text-[#C4C6D5] py-3 px-6 flex items-center gap-3 hover:bg-[#1C1B1D] font-label uppercase tracking-widest text-[10px] hover:text-white transition-all duration-300 group"
+            }
           >
-            <Icon
-              className={cn(
-                "w-4 h-4 shrink-0",
+            <span
+              className="material-symbols-outlined group-hover:translate-x-1 transition-transform"
+              style={
                 isActive(href)
-                  ? "text-accent"
-                  : "text-on-muted group-hover:text-on-surface",
-              )}
-            />
-            <span className="uppercase tracking-wider text-xs font-semibold">
-              {label}
+                  ? { fontVariationSettings: "'FILL' 1" }
+                  : undefined
+              }
+            >
+              {icon}
             </span>
+            <span>{label}</span>
           </Link>
         ))}
-      </nav>
+      </div>
 
-      {/* Bottom actions */}
-      <div className="px-3 pb-6 space-y-0.5 border-t border-obsidian-elevated mt-4 pt-4">
-        <Link
-          href="#"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-muted hover:text-on-surface hover:bg-obsidian-card text-sm transition-colors"
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span className="uppercase tracking-wider text-xs font-semibold">
-            Support
-          </span>
-        </Link>
+      {/* Footer — apenas Sign Out colado no fundo */}
+      <div className="mt-auto w-full">
         <Link
           href="/login"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-muted hover:text-status-error hover:bg-status-error/10 text-sm transition-colors"
+          className="text-[#C4C6D5] py-3 px-6 flex items-center gap-3 hover:bg-[#201F21] font-label uppercase tracking-widest text-[10px] hover:text-white transition-all duration-300 group"
         >
-          <LogOut className="w-4 h-4" />
-          <span className="uppercase tracking-wider text-xs font-semibold">
-            Sign Out
+          <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
+            logout
           </span>
+          <span>Sign Out</span>
         </Link>
       </div>
-    </aside>
+    </nav>
   );
 }

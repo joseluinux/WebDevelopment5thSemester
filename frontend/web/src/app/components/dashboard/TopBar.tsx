@@ -1,44 +1,44 @@
 "use client";
 
-import { Bell, Grid3X3, Search } from "lucide-react";
+import Link from "next/link";
 
 export function TopBar() {
   return (
-    <header className="fixed top-0 left-48 right-0 h-14 z-30 flex items-center px-6 gap-4 bg-obsidian-surface/60 backdrop-blur-glass border-b border-obsidian-elevated">
-      {/* Search */}
-      <div className="flex-1 max-w-xs">
-        <div className="flex items-center gap-2 bg-obsidian-card rounded-lg px-3 py-2 border border-obsidian-elevated">
-          <Search className="w-3.5 h-3.5 text-on-muted shrink-0" />
+    <header className="bg-[#1C1B1D]/80 backdrop-blur-xl sticky top-0 z-40 shadow-2xl shadow-black/40 flex justify-between items-center w-full px-6 py-3 border-none shadow-[0px_1px_0px_0px_rgba(255,255,255,0.05)]">
+      <div className="flex items-center gap-4">
+        {/* Mobile brand */}
+        <div className="md:hidden text-xl font-bold text-white tracking-tighter font-headline">
+          LUMEMEI
+        </div>
+        {/* Search */}
+        <div className="hidden sm:flex items-center bg-surface-container-lowest rounded-full px-4 py-2 border border-outline-variant/15 w-64 focus-within:border-primary/30 transition-colors">
+          <span className="material-symbols-outlined text-on-surface-variant text-sm mr-2">
+            search
+          </span>
           <input
-            type="text"
+            className="bg-transparent border-none text-sm font-body text-on-surface focus:ring-0 w-full placeholder-on-surface-variant p-0 outline-none"
             placeholder="Search transactions..."
-            className="bg-transparent text-sm text-on-muted placeholder-on-muted/60 outline-none w-full"
+            type="text"
           />
         </div>
       </div>
 
-      <div className="flex-1" />
-
-      {/* Actions */}
-      <div className="flex items-center gap-3">
-        <button className="relative p-2 rounded-lg hover:bg-obsidian-card transition-colors text-on-muted hover:text-on-surface">
-          <Bell className="w-4 h-4" />
+      <div className="flex items-center gap-2">
+        <button className="text-[#C4C6D5] active:opacity-80 transition-all hover:bg-[#2B292C] transition-colors duration-200 p-2 rounded-full flex items-center justify-center">
+          <span className="material-symbols-outlined">notifications</span>
         </button>
-
-        <button className="p-2 rounded-lg hover:bg-obsidian-card transition-colors text-on-muted hover:text-on-surface">
-          <Grid3X3 className="w-4 h-4" />
+        <button className="text-[#C4C6D5] active:opacity-80 transition-all hover:bg-[#2B292C] transition-colors duration-200 p-2 rounded-full flex items-center justify-center">
+          <span className="material-symbols-outlined">apps</span>
         </button>
-
-        {/* MEI Name */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-obsidian-card border border-obsidian-elevated text-sm text-on-surface">
-          <span className="w-2 h-2 rounded-full bg-status-success shrink-0" />
-          <span className="font-medium">Meu MEI</span>
-        </div>
-
-        {/* Avatar */}
-        <div className="w-8 h-8 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent font-bold text-xs shrink-0">
-          U
-        </div>
+        <div className="w-px h-6 bg-outline-variant/30 mx-2" />
+        <Link
+          href="/dashboard/settings"
+          className="flex items-center gap-2 pl-2 rounded-full hover:bg-surface-container-high transition-colors p-1"
+        >
+          <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center text-on-surface font-bold text-xs">
+            U
+          </div>
+        </Link>
       </div>
     </header>
   );

@@ -5,7 +5,7 @@
   --font-space-grotesk: "Space Grotesk", sans-serif;
   --font-inter: "Inter", sans-serif;
 
-  --color-bg: #0A0A0C;
+  --color-bg: #141315;
   --color-surface: #1C1B1D;
   --color-card: #201F21;
   --color-elevated: #2B292C;
@@ -79,9 +79,23 @@ body {
 
 /* ─── Glass / Glow Utilities ─── */
 .glass-card {
-  background: rgba(53, 52, 55, 0.4);
+  background: rgba(28, 27, 29, 0.55);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+}
+
+.glass-card-auth {
+  background: rgba(28, 27, 29, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.prism-gradient {
+  background: linear-gradient(135deg, #6A8CF2 0%, #B4C5FF 100%);
+}
+
+.ghost-border {
+  border: 1px solid rgba(67, 70, 82, 0.18);
 }
 
 .glow-primary {
@@ -121,7 +135,7 @@ body {
   left: -100px;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(150, 208, 221, 0.04) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 186, 73, 0.04) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
