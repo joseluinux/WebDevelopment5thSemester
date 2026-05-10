@@ -12,7 +12,8 @@ Core.Infrastructure/
     │   └── 20260509191608_AddRefreshTokens.cs  ← adds the refresh_tokens table
     └── Repositories/
         ├── UserRepository.cs
-        └── RefreshTokenRepository.cs
+        ├── RefreshTokenRepository.cs
+        └── MeiRepository.cs
 ```
 
 ---
@@ -61,6 +62,22 @@ Implements `IRefreshTokenRepository`.
 | `AddAsync` | `AddAsync` + `SaveChangesAsync` — flush immediately; the token must exist in the DB before the client receives it |
 | `GetByTokenAsync` | `FirstOrDefaultAsync` on the unique-indexed `token` column |
 | `RevokeAsync` | Sets `IsRevoked = true`, calls `Update` (idempotent if already tracked), then `SaveChangesAsync` — row is kept for audit and reuse-detection |
+
+---
+
+## `Persistence/Repositories/MeiRepository`
+
+Implements `IMeiRepository`.
+
+| Method | EF operation | Notes |
+|---|---|---|
+| `GetAllByUserIdAsync` | `AsNoTracking().Where(...).ToListAsync` | `AsNoTracking` — results go straight to the wire, never mutated |
+| `GetByIdAsync` | `FindAsync` | Change-tracker aware; entity is returned tracked so `UpdateAsync` callers can mutate it without re-attaching |
+| `AddAsync` | `AddAsync` + `SaveChangesAsync` | |
+| `UpdateAsync` | `Update` + `SaveChangesAsync` | Idempotent — works whether entity is tracked or detached |
+| `DeleteAsync` | Attach stub → `Remove` → `SaveChangesAsync` | Avoids a SELECT round-trip; cascade FKs handle dependent rows |
+
+The stub-delete pattern: a `Mei { Id = id }` entity is attached (only the PK is populated) and immediately removed, so EF emits a `DELETE WHERE id = @id` without first fetching the row. This is safe because ownership is already verified by the application-layer handler before `DeleteAsync` is called.
 
 ---
 

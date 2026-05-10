@@ -16,11 +16,13 @@ Core.Domain/
 │   └── RefreshToken.cs
 ├── Interfaces/           ← repository contracts (implemented by Core.Infrastructure)
 │   ├── IUserRepository.cs
-│   └── IRefreshTokenRepository.cs
+│   ├── IRefreshTokenRepository.cs
+│   └── IMeiRepository.cs
 └── Exceptions/           ← domain exceptions (thrown by application handlers)
     ├── EmailAlreadyTakenException.cs
     ├── InvalidCredentialsException.cs
     ├── InvalidRefreshTokenException.cs
+    ├── MeiNotFoundException.cs
     └── UserNotFoundException.cs
 ```
 
@@ -218,6 +220,18 @@ Task RevokeAsync(RefreshToken refreshToken, CancellationToken cancellationToken 
 
 Intentionally minimal — no `GetByUserAsync`, no `DeleteAsync`. The surface area is kept small until a real use case demands more. `RevokeAsync` performs a soft delete (sets `IsRevoked = true`, keeps the row).
 
+### `IMeiRepository`
+
+```csharp
+Task<IReadOnlyList<Mei>> GetAllByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+Task<Mei?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+Task AddAsync(Mei mei, CancellationToken cancellationToken = default);
+Task UpdateAsync(Mei mei, CancellationToken cancellationToken = default);
+Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+```
+
+This interface intentionally does **not** enforce ownership. Filtering "user X owns MEI Y" is a use-case concern that belongs in the application layer, where the right exception (`MeiNotFoundException` vs `UnauthorizedAccessException`) can be chosen deliberately. A repository that silently hid rows by user id would make the ownership check invisible and easy to accidentally skip. `DeleteAsync` is a hard delete — no soft-delete flag on `Mei`.
+
 ---
 
 ## `Exceptions/`
@@ -232,6 +246,11 @@ Thrown during login when either the email is not found or the password does not 
 
 ### `InvalidRefreshTokenException`
 Thrown by `RefreshHandler` and `LogoutHandler` when a refresh-token operation is rejected. A single exception type covers three underlying causes: token not found, token expired, and token revoked. The reason mirrors `InvalidCredentialsException`: an attacker must not be able to tell from the error response whether a token ever existed, whether it expired naturally, or whether it was explicitly revoked. Controllers map this to `401 Unauthorized`.
+
+### `MeiNotFoundException`
+Thrown when a MEI lookup by id returns no row. Controllers map this to `404 Not Found`.
+
+**Important:** this exception is thrown only when a row genuinely does not exist. When the row exists but belongs to a different user, handlers throw `UnauthorizedAccessException` instead (→ `403 Forbidden`). The distinction is intentional: `403` is a clearer signal during development and operations, and GUID ids are not enumerable so the small information disclosure (confirming some row exists) is an accepted trade-off.
 
 ### `UserNotFoundException`
 Thrown from authenticated use cases (e.g. `GetMeHandler`) when a valid JWT references a user that no longer exists (account deleted after the token was issued). This is intentionally distinct from `InvalidCredentialsException`: in an already-authenticated context the caller owns the token, so revealing "this id is gone" leaks nothing an attacker does not already know. Controllers map this to `404 Not Found`.

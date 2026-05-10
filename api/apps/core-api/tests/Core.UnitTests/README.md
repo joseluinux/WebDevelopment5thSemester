@@ -4,11 +4,13 @@ Unit tests for business logic in `Core.Application`. Tests run in-process with n
 
 ```
 Core.UnitTests/
-└── Auth/
-    ├── RegisterHandlerTests.cs   ← 2 tests for the Register use case
-    ├── LoginHandlerTests.cs      ← 3 tests for the Login use case
-    ├── GetMeHandlerTests.cs      ← 2 tests for the GetMe use case
-    └── RefreshHandlerTests.cs    ← 3 tests for the Refresh use case
+├── Auth/
+│   ├── RegisterHandlerTests.cs   ← 2 tests for the Register use case
+│   ├── LoginHandlerTests.cs      ← 3 tests for the Login use case
+│   ├── GetMeHandlerTests.cs      ← 2 tests for the GetMe use case
+│   └── RefreshHandlerTests.cs    ← 3 tests for the Refresh use case
+└── Meis/
+    └── MeiHandlerTests.cs        ← 3 tests covering the MEI CRUD security surface
 ```
 
 ---

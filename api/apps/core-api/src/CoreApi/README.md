@@ -10,7 +10,8 @@ CoreApi/
 ├── appsettings.json         ← default configuration (checked in, no secrets)
 ├── appsettings.Development.json  ← local overrides (git-ignored)
 ├── Controllers/
-│   └── AuthController.cs   ← all /v1/auth/* endpoints
+│   ├── AuthController.cs   ← all /v1/auth/* endpoints
+│   └── MeiController.cs    ← all /v1/meis/* endpoints
 └── Middlewares/             ← custom middleware (empty — reserved for future use)
 ```
 
@@ -38,11 +39,17 @@ All dependency wiring happens here. Nothing is auto-discovered; every binding is
 | `JwtSettings` | Singleton | Bound from `appsettings.json → JwtSettings` section |
 | `IUserRepository` | Scoped | `UserRepository` |
 | `IRefreshTokenRepository` | Scoped | `RefreshTokenRepository` |
+| `IMeiRepository` | Scoped | `MeiRepository` |
 | `RegisterHandler` | Scoped | concrete class |
 | `LoginHandler` | Scoped | concrete class |
 | `GetMeHandler` | Scoped | concrete class |
 | `RefreshHandler` | Scoped | concrete class |
 | `LogoutHandler` | Scoped | concrete class |
+| `GetMeisHandler` | Scoped | concrete class |
+| `GetMeiHandler` | Scoped | concrete class |
+| `CreateMeiHandler` | Scoped | concrete class |
+| `UpdateMeiHandler` | Scoped | concrete class |
+| `DeleteMeiHandler` | Scoped | concrete class |
 
 `JwtSettings` is registered as the concrete type (not `IOptions<JwtSettings>`) so handlers can take a plain dependency — keeping `Core.Application` free of `Microsoft.Extensions.Options` coupling and making unit tests trivial (`new JwtSettings { ... }`).
 
@@ -154,9 +161,9 @@ Request body (`TokenDto`):
 
 ---
 
-## DTOs
+## Auth DTOs (`AuthController.cs`)
 
-All DTOs are defined as `record` types directly in `AuthController.cs`. They are presentation-layer objects whose shape is dictated by the HTTP API, not by any domain concept.
+All auth DTOs are defined as `record` types directly in `AuthController.cs`.
 
 | DTO | Used by |
 |---|---|
@@ -184,6 +191,73 @@ All DTOs are defined as `record` types directly in `AuthController.cs`. They are
 ```
 
 `appsettings.json` is checked in with placeholder values. Real values are supplied via `appsettings.Development.json` (local, git-ignored) or environment variables / secret manager in production.
+
+---
+
+---
+
+## `Controllers/MeiController`
+
+Base route: `v1/meis`. `[Authorize]` is applied at the **class level** — every action requires a valid JWT without needing per-action decoration.
+
+Every action calls `TryGetUserId()`, a private helper that reads `ClaimTypes.NameIdentifier` and `JwtRegisteredClaimNames.Sub` (same defensive dual-claim pattern as `AuthController`) and parses the result as a `Guid`. A malformed subject returns `401` immediately, before the handler is called.
+
+`UserId` is **never** read from the URL or request body — the body has no `UserId` field on `CreateMeiDto` or `UpdateMeiDto`. This is the core multi-tenant guarantee.
+
+### `GET /v1/meis`
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` — JSON array of `MeiResult` (empty array if none) |
+| Missing/invalid JWT | `401` (auto) |
+
+### `POST /v1/meis`
+
+Request body (`CreateMeiDto`): `{ "name", "cnpj"?, "cnae"?, "annualLimit"?, "plan"? }`
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `201 Created` + `Location: /v1/meis/{id}` + `MeiResult` body |
+| Missing/invalid JWT | `401` (auto) |
+| Duplicate CNPJ for this user | `409 Conflict` `{ "error": "..." }` |
+
+### `GET /v1/meis/{meiId}`
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` + `MeiResult` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404 Not Found` `{ "error": "MEI with id '...' was not found." }` |
+| MEI belongs to another user | `403 Forbidden` `{ "error": "You do not have access to this MEI." }` |
+
+### `PUT /v1/meis/{meiId}`
+
+Request body (`UpdateMeiDto`): `{ "name", "cnae"?, "annualLimit"?, "plan"? }` — `cnpj` is excluded by design.
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` + updated `MeiResult` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404 Not Found` |
+| MEI belongs to another user | `403 Forbidden` |
+
+### `DELETE /v1/meis/{meiId}`
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `204 No Content` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404 Not Found` |
+| MEI belongs to another user | `403 Forbidden` |
+
+### DTOs
+
+| DTO | Fields |
+|---|---|
+| `CreateMeiDto` | `Name`, `Cnpj?`, `Cnae?`, `AnnualLimit?`, `Plan?` |
+| `UpdateMeiDto` | `Name`, `Cnae?`, `AnnualLimit?`, `Plan?` |
+
+Neither DTO has a `UserId` field — ownership is always derived from the JWT, never from the body.
 
 ---
 

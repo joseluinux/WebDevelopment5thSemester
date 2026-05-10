@@ -5,6 +5,11 @@ using Core.Application.UseCases.Auth.Login;
 using Core.Application.UseCases.Auth.Logout;
 using Core.Application.UseCases.Auth.Refresh;
 using Core.Application.UseCases.Auth.Register;
+using Core.Application.UseCases.Meis.CreateMei;
+using Core.Application.UseCases.Meis.DeleteMei;
+using Core.Application.UseCases.Meis.GetMei;
+using Core.Application.UseCases.Meis.GetMeis;
+using Core.Application.UseCases.Meis.UpdateMei;
 using Core.Domain.Interfaces;
 using Core.Infrastructure.Persistence;
 using Core.Infrastructure.Persistence.Repositories;
@@ -100,11 +105,17 @@ builder.Services.AddAuthorization();
 // gets one extra line here — explicit and trivial to discover.
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IMeiRepository, MeiRepository>();
 builder.Services.AddScoped<RegisterHandler>();
 builder.Services.AddScoped<LoginHandler>();
 builder.Services.AddScoped<GetMeHandler>();
 builder.Services.AddScoped<RefreshHandler>();
 builder.Services.AddScoped<LogoutHandler>();
+builder.Services.AddScoped<GetMeisHandler>();
+builder.Services.AddScoped<GetMeiHandler>();
+builder.Services.AddScoped<CreateMeiHandler>();
+builder.Services.AddScoped<UpdateMeiHandler>();
+builder.Services.AddScoped<DeleteMeiHandler>();
 
 var app = builder.Build();
 

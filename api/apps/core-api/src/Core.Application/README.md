@@ -27,6 +27,23 @@ Core.Application/
         └── Logout/
             ├── LogoutCommand.cs
             └── LogoutHandler.cs
+    └── Meis/
+        ├── MeiResult.cs            ← shared safe DTO for all MEI use cases
+        ├── GetMeis/
+        │   ├── GetMeisQuery.cs
+        │   └── GetMeisHandler.cs
+        ├── GetMei/
+        │   ├── GetMeiQuery.cs
+        │   └── GetMeiHandler.cs
+        ├── CreateMei/
+        │   ├── CreateMeiCommand.cs
+        │   └── CreateMeiHandler.cs
+        ├── UpdateMei/
+        │   ├── UpdateMeiCommand.cs
+        │   └── UpdateMeiHandler.cs
+        └── DeleteMei/
+            ├── DeleteMeiCommand.cs
+            └── DeleteMeiHandler.cs
 ```
 
 ---
@@ -185,6 +202,96 @@ Note: expiration is not checked here — revoking an already-expired token is ha
 
 **Exceptions thrown:**
 - `InvalidRefreshTokenException` — token unknown or already revoked (→ `401 Unauthorized`).
+
+---
+
+---
+
+## MEI Use Cases
+
+All MEI handlers inject only `IMeiRepository`. The `UserId` in every command/query comes from the JWT `sub` claim extracted by the controller — the request body has no `UserId` field and cannot influence ownership.
+
+### Shared DTO — `MeiResult`
+
+```
+MeiResult(Guid Id, string Name, string? Cnpj, string? Cnae,
+          decimal? AnnualLimit, string? Plan, DateTime CreatedAt, DateTime? UpdatedAt)
+```
+
+Used as the return type of every MEI use case that produces output. `UserId` is intentionally absent — it is implicit from the JWT. The `User` navigation property on `Mei` carries `PasswordHash`; a narrow DTO is the only safe wire shape.
+
+---
+
+### `Meis/GetMeis`
+
+Lists every MEI owned by the caller. Multi-tenant isolation happens at the SQL level — the repository query is already scoped to `userId`, so no row from another tenant can slip through.
+
+**Input:** `GetMeisQuery(Guid UserId)`  
+**Output:** `IReadOnlyList<MeiResult>`
+
+---
+
+### `Meis/GetMei`
+
+Fetches a single MEI with an explicit two-step ownership check:
+
+1. Load by `MeiId` — throw `MeiNotFoundException` if null.
+2. Compare `mei.UserId == query.UserId` — throw `UnauthorizedAccessException` if not.
+
+Step order matters: existence is checked first so that a missing row produces `404`, not `403`.
+
+**Input:** `GetMeiQuery(Guid UserId, Guid MeiId)`  
+**Output:** `MeiResult`
+
+**Exceptions thrown:**
+- `MeiNotFoundException` → `404`
+- `UnauthorizedAccessException` → `403`
+
+---
+
+### `Meis/CreateMei`
+
+Creates a new MEI for the authenticated user.
+
+1. If a `Cnpj` is supplied, load all existing MEIs for the user and check for a duplicate CNPJ. Throws `InvalidOperationException` on match (→ `409 Conflict`).
+2. Build a `Mei` entity with a freshly generated `Guid` id (no DB round-trip needed for the id).
+3. Persist via `AddAsync` and return the projection.
+
+**Input:** `CreateMeiCommand(Guid UserId, string Name, string? Cnpj, string? Cnae, decimal? AnnualLimit, string? Plan)`  
+**Output:** `MeiResult`
+
+**Note:** `Cnpj` is nullable — MEIs may be created without one and have it filled in later via `UpdateMei`.
+
+**Exceptions thrown:**
+- `InvalidOperationException` — duplicate CNPJ for this user → `409 Conflict`
+
+---
+
+### `Meis/UpdateMei`
+
+Updates the editable fields of an existing MEI after ownership verification (same two-step pattern as `GetMei`). `Cnpj`, `UserId`, and `CreatedAt` are intentionally not on the command surface — CNPJ identifies a real company in the Receita Federal and must not be silently changed.
+
+**Editable fields:** `Name`, `Cnae`, `AnnualLimit`, `Plan`, `UpdatedAt` (set to `UtcNow`).
+
+**Input:** `UpdateMeiCommand(Guid UserId, Guid MeiId, string Name, string? Cnae, decimal? AnnualLimit, string? Plan)`  
+**Output:** `MeiResult`
+
+**Exceptions thrown:**
+- `MeiNotFoundException` → `404`
+- `UnauthorizedAccessException` → `403`
+
+---
+
+### `Meis/DeleteMei`
+
+Hard-deletes a MEI after existence and ownership checks. Cascade FKs in `AppDbContext` delete dependent rows (transactions, products, employees, documents, AI recommendations) automatically.
+
+**Input:** `DeleteMeiCommand(Guid UserId, Guid MeiId)`  
+**Output:** none (void `Task`)
+
+**Exceptions thrown:**
+- `MeiNotFoundException` → `404`
+- `UnauthorizedAccessException` → `403`
 
 ---
 
