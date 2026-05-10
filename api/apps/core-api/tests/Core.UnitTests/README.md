@@ -71,6 +71,18 @@ The last two tests assert the same exception type and confirm no side effects �
 
 ---
 
+### `MeiHandlerTests`
+
+Tests are distributed across `CreateMeiHandler` and `GetMeiHandler`. The two ownership-failure cases (`MeiNotFoundException`, `UnauthorizedAccessException`) only arise in handlers that load an existing MEI (Get/Update/Delete). Testing them once on `GetMei` is sufficient — the ownership check is line-for-line identical in `UpdateMei` and `DeleteMei`.
+
+| Test | Handler | Scenario | Expected |
+|---|---|---|---|
+| `CreateMeiHandler_HandleAsync_ValidData_CallsAddAsyncOnce` | `CreateMeiHandler` | No pre-existing MEIs; valid command | `AddAsync` called once; returned `MeiResult.Id` is non-empty and fields match the command |
+| `GetMeiHandler_HandleAsync_MeiNotFound_ThrowsMeiNotFoundException` | `GetMeiHandler` | Repository returns `null` | Throws `MeiNotFoundException` — not `UnauthorizedAccessException` — so callers can distinguish a genuine miss from an ownership violation |
+| `GetMeiHandler_HandleAsync_DifferentOwner_ThrowsUnauthorizedAccessException` | `GetMeiHandler` | Row exists but `mei.UserId` ≠ `query.UserId` | Throws `UnauthorizedAccessException`; confirms multi-tenant boundary — any authenticated user guessing another user's GUID must not receive the row |
+
+---
+
 ## Running
 
 ```bash

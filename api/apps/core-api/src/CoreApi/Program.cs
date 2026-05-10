@@ -10,6 +10,9 @@ using Core.Application.UseCases.Meis.DeleteMei;
 using Core.Application.UseCases.Meis.GetMei;
 using Core.Application.UseCases.Meis.GetMeis;
 using Core.Application.UseCases.Meis.UpdateMei;
+using Core.Application.UseCases.Users.DeleteAccount;
+using Core.Application.UseCases.Users.GetProfile;
+using Core.Application.UseCases.Users.UpdateProfile;
 using Core.Domain.Interfaces;
 using Core.Infrastructure.Persistence;
 using Core.Infrastructure.Persistence.Repositories;
@@ -116,6 +119,9 @@ builder.Services.AddScoped<GetMeiHandler>();
 builder.Services.AddScoped<CreateMeiHandler>();
 builder.Services.AddScoped<UpdateMeiHandler>();
 builder.Services.AddScoped<DeleteMeiHandler>();
+builder.Services.AddScoped<GetProfileHandler>();
+builder.Services.AddScoped<UpdateProfileHandler>();
+builder.Services.AddScoped<DeleteAccountHandler>();
 
 var app = builder.Build();
 

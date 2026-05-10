@@ -39,4 +39,31 @@ public class UserRepository : IUserRepository
         await _context.Users.AddAsync(user, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    // Update is idempotent — if the entity is already tracked (loaded in this
+    // scope) Update marks every property modified, and EF still emits a
+    // single UPDATE. If the entity is detached, this is the call that
+    // attaches it for the SaveChanges flush.
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    // Delete by id. We FIND the entity rather than attaching a fresh stub
+    // because the use case (DeleteAccountHandler) loaded the row earlier in
+    // the same DbContext scope — attaching a second instance with the same
+    // key value would throw "another instance with the same key value is
+    // already being tracked". FindAsync hits the change tracker first, so
+    // the loaded entity is reused at zero SQL cost. Dependent rows
+    // (refresh_tokens, meis, transactions, products, employees, ...) are
+    // removed by ON DELETE CASCADE constraints on the FK side — see
+    // AppDbContext for the relationships.
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+        if (entity is null) return;
+        _context.Users.Remove(entity);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }
