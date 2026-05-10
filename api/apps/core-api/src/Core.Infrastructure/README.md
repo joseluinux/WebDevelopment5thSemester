@@ -14,7 +14,8 @@ Core.Infrastructure/
         ├── UserRepository.cs
         ├── RefreshTokenRepository.cs
         ├── MeiRepository.cs
-        └── TransactionRepository.cs
+        ├── TransactionRepository.cs
+        └── ProductRepository.cs
 ```
 
 ---
@@ -79,6 +80,20 @@ Implements `IMeiRepository`.
 | `DeleteAsync` | Attach stub → `Remove` → `SaveChangesAsync` | Avoids a SELECT round-trip; cascade FKs handle dependent rows |
 
 The stub-delete pattern: a `Mei { Id = id }` entity is attached (only the PK is populated) and immediately removed, so EF emits a `DELETE WHERE id = @id` without first fetching the row. This is safe because ownership is already verified by the application-layer handler before `DeleteAsync` is called.
+
+---
+
+## `Persistence/Repositories/ProductRepository`
+
+Implements `IProductRepository`.
+
+| Method | EF operation | Notes |
+|---|---|---|
+| `GetAllByMeiIdAsync` | `AsNoTracking().Where(…).OrderByDescending(…).ThenBy(…).ToListAsync` | Optional `status` filter chained only when non-null/non-empty. Sorted newest-first, then by name. |
+| `GetByIdAsync` | `FindAsync` | Change-tracker aware; entity returned tracked so `UpdateProductHandler` can mutate it |
+| `AddAsync` | `AddAsync` + `SaveChangesAsync` | |
+| `UpdateAsync` | `Update` + `SaveChangesAsync` | Idempotent whether entity is tracked or detached |
+| `DeleteAsync` | `FindAsync` → `Remove` → `SaveChangesAsync` | Same Find-then-Remove pattern as `TransactionRepository` — avoids a tracker conflict when the entity was already loaded by the handler in this scope |
 
 ---
 

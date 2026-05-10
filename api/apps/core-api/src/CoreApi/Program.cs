@@ -10,6 +10,11 @@ using Core.Application.UseCases.Meis.DeleteMei;
 using Core.Application.UseCases.Meis.GetMei;
 using Core.Application.UseCases.Meis.GetMeis;
 using Core.Application.UseCases.Meis.UpdateMei;
+using Core.Application.UseCases.Products.CreateProduct;
+using Core.Application.UseCases.Products.DeleteProduct;
+using Core.Application.UseCases.Products.GetProduct;
+using Core.Application.UseCases.Products.GetProducts;
+using Core.Application.UseCases.Products.UpdateProduct;
 using Core.Application.UseCases.Transactions.CreateTransaction;
 using Core.Application.UseCases.Transactions.DeleteTransaction;
 using Core.Application.UseCases.Transactions.GetTransaction;
@@ -133,6 +138,12 @@ builder.Services.AddScoped<GetTransactionHandler>();
 builder.Services.AddScoped<CreateTransactionHandler>();
 builder.Services.AddScoped<UpdateTransactionHandler>();
 builder.Services.AddScoped<DeleteTransactionHandler>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<GetProductsHandler>();
+builder.Services.AddScoped<GetProductHandler>();
+builder.Services.AddScoped<CreateProductHandler>();
+builder.Services.AddScoped<UpdateProductHandler>();
+builder.Services.AddScoped<DeleteProductHandler>();
 
 var app = builder.Build();
 

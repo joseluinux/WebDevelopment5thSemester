@@ -18,13 +18,17 @@ Core.Domain/
 │   ├── IUserRepository.cs
 │   ├── IRefreshTokenRepository.cs
 │   ├── IMeiRepository.cs
-│   └── ITransactionRepository.cs
+│   ├── ITransactionRepository.cs
+│   └── IProductRepository.cs
 └── Exceptions/           ← domain exceptions (thrown by application handlers)
     ├── EmailAlreadyTakenException.cs
     ├── InvalidCredentialsException.cs
     ├── InvalidRefreshTokenException.cs
     ├── InvalidTransactionTypeException.cs
+    ├── InvalidProductStatusException.cs
+    ├── InvalidProductPriceException.cs
     ├── MeiNotFoundException.cs
+    ├── ProductNotFoundException.cs
     ├── TransactionNotFoundException.cs
     └── UserNotFoundException.cs
 ```
@@ -249,6 +253,18 @@ Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
 `GetAllByMeiIdAsync` accepts optional filters (date range, type, category); any `null` parameter means "do not filter on this dimension". Ownership enforcement is not in the repository — the application layer verifies the caller owns the parent MEI before querying transactions.
 
+### `IProductRepository`
+
+```csharp
+Task<IReadOnlyList<Product>> GetAllByMeiIdAsync(Guid meiId, string? status, CancellationToken cancellationToken = default);
+Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+Task AddAsync(Product product, CancellationToken cancellationToken = default);
+Task UpdateAsync(Product product, CancellationToken cancellationToken = default);
+Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+```
+
+`GetAllByMeiIdAsync` accepts an optional `status` filter (`"active"` / `"inactive"`); `null` or empty means no filter. Like `ITransactionRepository`, ownership enforcement is the application layer's responsibility.
+
 ---
 
 ## `Exceptions/`
@@ -263,6 +279,21 @@ Thrown during login when either the email is not found or the password does not 
 
 ### `InvalidRefreshTokenException`
 Thrown by `RefreshHandler` and `LogoutHandler` when a refresh-token operation is rejected. A single exception type covers three underlying causes: token not found, token expired, and token revoked. The reason mirrors `InvalidCredentialsException`: an attacker must not be able to tell from the error response whether a token ever existed, whether it expired naturally, or whether it was explicitly revoked. Controllers map this to `401 Unauthorized`.
+
+### `InvalidProductStatusException`
+Thrown when a Create or Update product command carries a `Status` value other than `"active"` or `"inactive"`. Exposes the canonical list:
+
+```csharp
+public static readonly IReadOnlyList<string> ValidStatuses = new[] { "active", "inactive" };
+```
+
+Controllers map this to `400 Bad Request`.
+
+### `InvalidProductPriceException`
+Thrown when `Price <= 0` on a Create or Update command. Zero is rejected because the margin formula `(Price - Cost) / Price * 100` divides by `Price` — a zero or negative price would produce a division-by-zero or nonsensical result. Controllers map this to `400 Bad Request`.
+
+### `ProductNotFoundException`
+Thrown when a product lookup by id returns no row **or** when the row exists but belongs to a different MEI than the one in the URL (cross-MEI probe resistance — same dual-cause pattern as `TransactionNotFoundException`). Controllers map this to `404 Not Found`.
 
 ### `InvalidTransactionTypeException`
 Thrown when a Create or Update command carries a `Type` value other than `"income"` or `"expense"`. The exception class itself exposes the canonical list as a static field:

@@ -12,7 +12,8 @@ CoreApi/
 ├── Controllers/
 │   ├── AuthController.cs        ← all /v1/auth/* endpoints
 │   ├── MeiController.cs         ← all /v1/meis/* endpoints
-│   └── TransactionsController.cs ← all /v1/meis/{meiId}/transactions/* endpoints
+│   ├── TransactionsController.cs ← all /v1/meis/{meiId}/transactions/* endpoints
+│   └── ProductsController.cs     ← all /v1/meis/{meiId}/products/* endpoints
 └── Middlewares/             ← custom middleware (empty — reserved for future use)
 ```
 
@@ -57,6 +58,12 @@ All dependency wiring happens here. Nothing is auto-discovered; every binding is
 | `CreateTransactionHandler` | Scoped | concrete class |
 | `UpdateTransactionHandler` | Scoped | concrete class |
 | `DeleteTransactionHandler` | Scoped | concrete class |
+| `IProductRepository` | Scoped | `ProductRepository` |
+| `GetProductsHandler` | Scoped | concrete class |
+| `GetProductHandler` | Scoped | concrete class |
+| `CreateProductHandler` | Scoped | concrete class |
+| `UpdateProductHandler` | Scoped | concrete class |
+| `DeleteProductHandler` | Scoped | concrete class |
 
 `JwtSettings` is registered as the concrete type (not `IOptions<JwtSettings>`) so handlers can take a plain dependency — keeping `Core.Application` free of `Microsoft.Extensions.Options` coupling and making unit tests trivial (`new JwtSettings { ... }`).
 
@@ -342,6 +349,83 @@ Request body (`UpdateTransactionDto`): `{ "type", "category"?, "amount", "date",
 | `UpdateTransactionDto` | `Type`, `Category?`, `Amount`, `Date`, `Description?` |
 
 Neither DTO has a `MeiId` or `UserId` field — those come from the URL path and JWT.
+
+---
+
+---
+
+## `Controllers/ProductsController`
+
+Base route: `v1/meis/{meiId:guid}/products`. `[Authorize]` at the class level. Same `TryGetUserId()` dual-claim helper as `TransactionsController`. Neither DTO carries `MeiId` or `UserId`.
+
+### `GET /v1/meis/{meiId}/products`
+
+Query param: `status` (`"active"` | `"inactive"`) — optional.
+
+| Outcome | HTTP |
+|---|---|
+| Success | `200 OK` — JSON array of `ProductResult`, newest first then by name |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+
+Each row includes `margin` (gross-margin %) and `isMarginBelowDesired` (bool) computed from `Cost`/`Price`/`DesiredMargin`.
+
+### `GET /v1/meis/{meiId}/products/{id}`
+
+| Outcome | HTTP |
+|---|---|
+| Success | `200 OK` + `ProductResult` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Product not found or belongs to a different MEI | `404` |
+
+### `POST /v1/meis/{meiId}/products`
+
+Request body (`CreateProductDto`): `{ "name", "cost", "price", "desiredMargin", "status" }`
+
+All fields required; `cost` and `price` are `decimal`, `status` must be `"active"` or `"inactive"`, `price` must be `> 0`.
+
+| Outcome | HTTP |
+|---|---|
+| Success | `201 Created` + `Location` + `ProductResult` body |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Invalid status | `400 Bad Request` |
+| Price ≤ 0 | `400 Bad Request` |
+
+### `PUT /v1/meis/{meiId}/products/{id}`
+
+Request body (`UpdateProductDto`): same fields as `CreateProductDto`.
+
+| Outcome | HTTP |
+|---|---|
+| Success | `200 OK` + updated `ProductResult` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Product not found or belongs to a different MEI | `404` |
+| Invalid status | `400` |
+| Price ≤ 0 | `400` |
+
+### `DELETE /v1/meis/{meiId}/products/{id}`
+
+| Outcome | HTTP |
+|---|---|
+| Success | `204 No Content` |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Product not found or belongs to a different MEI | `404` |
+
+### DTOs
+
+| DTO | Fields |
+|---|---|
+| `CreateProductDto` | `Name`, `Cost`, `Price`, `DesiredMargin`, `Status` |
+| `UpdateProductDto` | `Name`, `Cost`, `Price`, `DesiredMargin`, `Status` |
 
 ---
 

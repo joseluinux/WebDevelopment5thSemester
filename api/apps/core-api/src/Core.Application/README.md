@@ -61,6 +61,23 @@ Core.Application/
         └── DeleteTransaction/
             ├── DeleteTransactionCommand.cs
             └── DeleteTransactionHandler.cs
+    └── Products/
+        ├── ProductResult.cs            ← shared DTO + internal ProductMapper (margin formula)
+        ├── GetProducts/
+        │   ├── GetProductsQuery.cs
+        │   └── GetProductsHandler.cs
+        ├── GetProduct/
+        │   ├── GetProductQuery.cs
+        │   └── GetProductHandler.cs
+        ├── CreateProduct/
+        │   ├── CreateProductCommand.cs
+        │   └── CreateProductHandler.cs
+        ├── UpdateProduct/
+        │   ├── UpdateProductCommand.cs
+        │   └── UpdateProductHandler.cs
+        └── DeleteProduct/
+            ├── DeleteProductCommand.cs
+            └── DeleteProductHandler.cs
 ```
 
 ---
@@ -396,6 +413,104 @@ Hard-deletes a transaction after both security checks.
 **Output:** none (void `Task`)
 
 **Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `TransactionNotFoundException` → 404.
+
+---
+
+---
+
+## Product Use Cases
+
+Products are nested under their parent MEI. Every handler injects `IMeiRepository` and `IProductRepository` and applies the same **two-level ownership check** as the Transaction handlers: verify MEI existence and ownership before any product operation, then for single-resource operations verify the product belongs to that MEI.
+
+### `ProductResult` + `ProductMapper`
+
+```
+ProductResult(Guid Id, Guid MeiId, string Name, decimal? Cost, decimal? Price,
+              decimal? DesiredMargin, string? Status, DateTime CreatedAt, DateTime? UpdatedAt,
+              decimal Margin, bool IsMarginBelowDesired)
+```
+
+`Margin` and `IsMarginBelowDesired` are computed on every read by the `internal static ProductMapper.ToResult(Product)` helper — never stored, so they can never drift from `Cost`/`Price`.
+
+**Margin formula (gross margin, in percent):**
+```
+margin = (Price - Cost) / Price * 100
+isMarginBelowDesired = margin < DesiredMargin
+```
+
+**Defensive edge cases** (existing rows from Supabase may carry nulls):
+
+| Condition | Behaviour |
+|---|---|
+| `Price` is `null` or `<= 0` | `Margin = 0`, `IsMarginBelowDesired = false` |
+| `Cost` is `null` | Treated as `0` (margin = 100%) |
+| `DesiredMargin` is `null` | `IsMarginBelowDesired = false` (no target to be below) |
+
+`ProductMapper` is the **single source of truth** for the formula. All five handlers call it — a formula change requires editing exactly one place.
+
+`Cost`, `Price`, `DesiredMargin`, and `Status` are nullable on the DTO to reflect the Postgres column types (scaffolded from Supabase). `Margin` and `IsMarginBelowDesired` are non-nullable because `ProductMapper` always provides a sensible default.
+
+**Note on DTO placement:** `ProductResult` lives at `Products/ProductResult.cs` (not under `GetProducts/`) following the same convention as `MeiResult` and `TransactionResult`, so all handlers import from one place.
+
+---
+
+### `Products/GetProducts`
+
+Lists all products in a MEI, with optional `status` filter.
+
+**Input:** `GetProductsQuery(Guid MeiId, Guid UserId, string? Status)`
+**Output:** `IReadOnlyList<ProductResult>` (newest first, then by name)
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403.
+
+---
+
+### `Products/GetProduct`
+
+Fetches one product with the two-level ownership check.
+
+**Input:** `GetProductQuery(Guid MeiId, Guid UserId, Guid ProductId)`
+**Output:** `ProductResult`
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `ProductNotFoundException` → 404.
+
+---
+
+### `Products/CreateProduct`
+
+Creates a product inside the caller's MEI. All fields are required at the command level even though the entity columns are nullable — forcing a complete row on creation avoids the "what's the margin of this product?" UX hole when fields are missing.
+
+**Validation order (matters for security):**
+1. MEI ownership (403 before any input-validation hint leaks to a probe).
+2. `Status` must be `"active"` or `"inactive"` — `InvalidProductStatusException`.
+3. `Price` must be `> 0` — `InvalidProductPriceException`.
+
+**Input:** `CreateProductCommand(Guid MeiId, Guid UserId, string Name, decimal Cost, decimal Price, decimal DesiredMargin, string Status)`
+**Output:** `ProductResult`
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `InvalidProductStatusException` → 400, `InvalidProductPriceException` → 400.
+
+---
+
+### `Products/UpdateProduct`
+
+Updates all editable fields of a product. `Id`, `MeiId`, and `CreatedAt` are immutable. Same validation order as `CreateProduct` (ownership → status → price → load product).
+
+**Input:** `UpdateProductCommand(Guid MeiId, Guid UserId, Guid ProductId, string Name, decimal Cost, decimal Price, decimal DesiredMargin, string Status)`
+**Output:** `ProductResult`
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `InvalidProductStatusException` → 400, `InvalidProductPriceException` → 400, `ProductNotFoundException` → 404.
+
+---
+
+### `Products/DeleteProduct`
+
+Hard-deletes a product after existence and ownership checks.
+
+**Input:** `DeleteProductCommand(Guid MeiId, Guid UserId, Guid ProductId)`
+**Output:** none (void `Task`)
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `ProductNotFoundException` → 404.
 
 ---
 
