@@ -7,26 +7,45 @@ Core.Application/
 ├── Auth/
 │   ├── JwtSettings.cs          ← strongly-typed POCO for JWT configuration
 │   └── TokenFactory.cs         ← internal helper: JWT signing + CSPRNG refresh-token generation
+├── Interfaces/
+│   └── IEmailService.cs        ← abstraction for transactional email (implemented by Core.Infrastructure)
 └── UseCases/
-    └── Auth/
-        ├── Register/
-        │   ├── RegisterCommand.cs
-        │   └── RegisterHandler.cs
-        ├── Login/
-        │   ├── LoginCommand.cs
-        │   ├── LoginHandler.cs
-        │   └── LoginResult.cs
-        ├── GetMe/
-        │   ├── GetMeQuery.cs
-        │   ├── GetMeHandler.cs
-        │   └── GetMeResult.cs
-        ├── Refresh/
-        │   ├── RefreshCommand.cs
-        │   ├── RefreshHandler.cs
-        │   └── RefreshResult.cs
-        └── Logout/
-            ├── LogoutCommand.cs
-            └── LogoutHandler.cs
+    ├── Auth/
+    │   ├── Register/
+    │   │   ├── RegisterCommand.cs
+    │   │   └── RegisterHandler.cs
+    │   ├── Login/
+    │   │   ├── LoginCommand.cs
+    │   │   ├── LoginHandler.cs
+    │   │   └── LoginResult.cs
+    │   ├── GetMe/
+    │   │   ├── GetMeQuery.cs
+    │   │   ├── GetMeHandler.cs
+    │   │   └── GetMeResult.cs
+    │   ├── Refresh/
+    │   │   ├── RefreshCommand.cs
+    │   │   ├── RefreshHandler.cs
+    │   │   └── RefreshResult.cs
+    │   ├── Logout/
+    │   │   ├── LogoutCommand.cs
+    │   │   └── LogoutHandler.cs
+    │   ├── ForgotPassword/
+    │   │   ├── ForgotPasswordCommand.cs
+    │   │   └── ForgotPasswordHandler.cs
+    │   └── ResetPassword/
+    │       ├── ResetPasswordCommand.cs
+    │       └── ResetPasswordHandler.cs
+    ├── Users/
+    │   ├── GetProfile/
+    │   │   ├── GetProfileQuery.cs
+    │   │   ├── GetProfileHandler.cs
+    │   │   └── GetProfileResult.cs     ← shared DTO for GET and PUT /v1/users/me
+    │   ├── UpdateProfile/
+    │   │   ├── UpdateProfileCommand.cs
+    │   │   └── UpdateProfileHandler.cs
+    │   └── DeleteAccount/
+    │       ├── DeleteAccountCommand.cs
+    │       └── DeleteAccountHandler.cs
     └── Meis/
         ├── MeiResult.cs            ← shared safe DTO for all MEI use cases
         ├── GetMeis/
@@ -61,23 +80,31 @@ Core.Application/
         └── DeleteTransaction/
             ├── DeleteTransactionCommand.cs
             └── DeleteTransactionHandler.cs
-    └── Products/
-        ├── ProductResult.cs            ← shared DTO + internal ProductMapper (margin formula)
-        ├── GetProducts/
-        │   ├── GetProductsQuery.cs
-        │   └── GetProductsHandler.cs
-        ├── GetProduct/
-        │   ├── GetProductQuery.cs
-        │   └── GetProductHandler.cs
-        ├── CreateProduct/
-        │   ├── CreateProductCommand.cs
-        │   └── CreateProductHandler.cs
-        ├── UpdateProduct/
-        │   ├── UpdateProductCommand.cs
-        │   └── UpdateProductHandler.cs
-        └── DeleteProduct/
-            ├── DeleteProductCommand.cs
-            └── DeleteProductHandler.cs
+    ├── Products/
+    │   ├── ProductResult.cs            ← shared DTO + internal ProductMapper (margin formula)
+    │   ├── GetProducts/
+    │   │   ├── GetProductsQuery.cs
+    │   │   └── GetProductsHandler.cs
+    │   ├── GetProduct/
+    │   │   ├── GetProductQuery.cs
+    │   │   └── GetProductHandler.cs
+    │   ├── CreateProduct/
+    │   │   ├── CreateProductCommand.cs
+    │   │   └── CreateProductHandler.cs
+    │   ├── UpdateProduct/
+    │   │   ├── UpdateProductCommand.cs
+    │   │   └── UpdateProductHandler.cs
+    │   └── DeleteProduct/
+    │       ├── DeleteProductCommand.cs
+    │       └── DeleteProductHandler.cs
+    └── Employees/
+        ├── GetEmployees/
+        │   ├── GetEmployeesQuery.cs
+        │   ├── GetEmployeesHandler.cs
+        │   └── GetEmployeesResult.cs   ← includes computed TotalCost field
+        └── CreateEmployee/
+            ├── CreateEmployeeCommand.cs
+            └── CreateEmployeeHandler.cs
 ```
 
 ---
@@ -236,6 +263,112 @@ Note: expiration is not checked here — revoking an already-expired token is ha
 
 **Exceptions thrown:**
 - `InvalidRefreshTokenException` — token unknown or already revoked (→ `401 Unauthorized`).
+
+---
+
+### `Auth/ForgotPassword`
+
+Sends a password-reset email to a registered address.
+
+**Flow:**
+1. Look up the user by email. If not found, **return silently** — no exception, no error.
+2. Mint a 64-byte CSPRNG token (base64-encoded).
+3. **Persist the `PasswordResetToken` first**, then send the email. Order matters: if the send fails after persisting, the user has no email but the row exists — a retry (another forgot-password call) simply produces a fresh token. The reverse (send first, persist fails) would put a live link in the inbox that the server can never validate.
+4. Delegate sending to `IEmailService.SendPasswordResetEmailAsync`.
+
+**Security invariant:** the handler always returns success — even for unknown emails. The controller always returns `200 OK`. An attacker probing for valid email addresses must observe identical responses for registered and unregistered addresses.
+
+**Token lifetime:** 1 hour (hard-coded in the handler).
+
+**Input:** `ForgotPasswordCommand(string Email)`
+
+**Output:** none (void `Task`).
+
+**Dependencies:** `IUserRepository`, `IPasswordResetTokenRepository`, `IEmailService`.
+
+---
+
+### `Auth/ResetPassword`
+
+Validates a reset token and applies the new password.
+
+**Flow:**
+1. Load the token — throw `InvalidResetTokenException` if null, expired, or already used.
+2. Load the owning user — throw `InvalidResetTokenException` if the user no longer exists (defensive: cascade should handle this, but we guard anyway).
+3. Hash the new password with BCrypt and call `IUserRepository.UpdateAsync`.
+4. **Mark the token used after the password write** — if `MarkAsUsedAsync` fails after `UpdateAsync`, the user already has the new password and at worst the token row stays live until its 1-hour TTL. The reverse (mark first, then update password) would risk a "burnt token, no password change" state if the update fails.
+
+**Security invariant:** all three failure modes (not found, expired, already used) throw the same `InvalidResetTokenException` with the same generic message — an attacker cannot distinguish "link was intercepted" from "link expired naturally" from "link already redeemed".
+
+**Input:** `ResetPasswordCommand(string Token, string NewPassword)`
+
+**Output:** none (void `Task`).
+
+**Dependencies:** `IPasswordResetTokenRepository`, `IUserRepository`.
+
+**Exceptions thrown:**
+- `InvalidResetTokenException` — token not found / expired / used, or user deleted (→ `400 Bad Request`).
+
+---
+
+---
+
+## User Profile Use Cases
+
+These handlers manage the authenticated user's own account — name, email, and account deletion. `UserId` always comes from the JWT `sub` claim; the request body cannot dictate which account is being operated on.
+
+### Shared DTO — `GetProfileResult`
+
+```
+GetProfileResult(Guid Id, string? Name, string Email, DateTime CreatedAt)
+```
+
+Returned by both `GetProfileHandler` and `UpdateProfileHandler` so clients only need to know one "user profile" shape. `PasswordHash` is intentionally absent.
+
+---
+
+### `Users/GetProfile`
+
+Returns the authenticated user's profile. Functionally equivalent to `Auth/GetMe` — kept separate for symmetry with `UpdateProfile` and `DeleteAccount`.
+
+**Input:** `GetProfileQuery(Guid UserId)`
+**Output:** `GetProfileResult`
+
+**Exceptions thrown:** `UserNotFoundException` → 404.
+
+---
+
+### `Users/UpdateProfile`
+
+Updates the editable fields of the authenticated user's profile (`Name`, `Email`). `PasswordHash`, `Id`, and `CreatedAt` are not on the command surface.
+
+**Flow:**
+1. Load the user — `UserNotFoundException` if missing.
+2. If the email is changing, check uniqueness: `GetByEmailAsync` and confirm the result (if any) belongs to a different user. Throws `EmailAlreadyTakenException` on conflict.
+3. Apply `Name`, `Email`, `UpdatedAt` and persist.
+4. Return the updated `GetProfileResult`.
+
+**No-op optimisation:** if the supplied email equals the current email (case-insensitive), the uniqueness check is skipped — avoids a useless DB round-trip and a subtle edge case where `GetByEmailAsync` would return the caller themselves, falsely triggering the conflict check.
+
+**Input:** `UpdateProfileCommand(Guid UserId, string? Name, string Email)`
+**Output:** `GetProfileResult`
+
+**Exceptions thrown:** `UserNotFoundException` → 404, `EmailAlreadyTakenException` → 409.
+
+---
+
+### `Users/DeleteAccount`
+
+Permanently removes the authenticated user's account. All dependent rows are deleted by `ON DELETE CASCADE` constraints at the database level — the handler deletes only the `User` row.
+
+**Why cascade via DB, not application code:**
+- A new child table added to the schema without a corresponding `DELETE` statement in the handler would silently leave orphans; a DB cascade catches it automatically.
+- A single `DELETE ON users` is atomic by construction; app-side cascades require an explicit transaction wrapper.
+
+**Input:** `DeleteAccountCommand(Guid UserId)`
+**Output:** none (void `Task`)
+
+**Exceptions thrown:** `UserNotFoundException` → 404 (guard against stale/malformed JWT).
 
 ---
 
@@ -511,6 +644,67 @@ Hard-deletes a product after existence and ownership checks.
 **Output:** none (void `Task`)
 
 **Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `ProductNotFoundException` → 404.
+
+---
+
+---
+
+## Employee Use Cases
+
+Employees are nested under their parent MEI. The initial slice ships only List and Create — Update/Delete will be added when those use cases land. Every handler performs a **two-level ownership check** (MEI existence → MEI ownership) before touching employee rows.
+
+### `GetEmployeesResult`
+
+```
+GetEmployeesResult(Guid Id, Guid MeiId, string Name, string? ContractType,
+                   decimal? Salary, decimal? Charges, DateTime CreatedAt, DateTime? UpdatedAt,
+                   decimal TotalCost)
+```
+
+`TotalCost = Salary + Charges` — the full monthly cost of keeping the employee on payroll (base salary + all employer-side charges such as INSS patronal, FGTS, etc.). Computed in the handler; never stored, so it cannot drift from its inputs. Null `Salary`/`Charges` are treated as `0` so `TotalCost` is always non-nullable.
+
+`ContractType`, `Salary`, and `Charges` are nullable on the DTO to honestly reflect the Postgres column types (existing rows scaffolded from Supabase may carry nulls).
+
+---
+
+### `Employees/GetEmployees`
+
+Lists all employees in a MEI.
+
+**Input:** `GetEmployeesQuery(Guid MeiId, Guid UserId)`
+**Output:** `IReadOnlyList<GetEmployeesResult>` (newest first, then alphabetical by name)
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403.
+
+---
+
+### `Employees/CreateEmployee`
+
+Creates a new employee in the caller's MEI. `ContractType`, `Salary`, and `Charges` are required at the command level (even though the entity columns allow null) — forcing a complete row on creation keeps `TotalCost` calculations truthful from day one.
+
+**Validation order (matters for security):**
+1. MEI ownership (403 before any input-validation hint leaks to a probe).
+2. `ContractType` must be `"clt"`, `"pj"`, or `"intern"` — `InvalidContractTypeException`.
+3. `Salary` must be `> 0` — `InvalidSalaryException`.
+
+**Input:** `CreateEmployeeCommand(Guid MeiId, Guid UserId, string Name, string ContractType, decimal Salary, decimal Charges)`
+**Output:** none (void `Task`) — controller returns `201 Created` with no body.
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `InvalidContractTypeException` → 400, `InvalidSalaryException` → 400.
+
+---
+
+## `Interfaces/IEmailService`
+
+Abstraction for transactional email. `Core.Application` handlers depend on this interface; `Core.Infrastructure` supplies the concrete `ResendEmailService` implementation.
+
+Methods are named after their *intent*, not the transport, so implementations own the HTML/text template and handlers stay free of markup.
+
+| Method | Description |
+|---|---|
+| `SendPasswordResetEmailAsync(string toEmail, string resetLink, ...)` | Sends the password-reset email with the one-time link |
+
+Why an interface rather than a direct Resend dependency: handlers remain unit-testable (Moq can replace the email service), the provider can be swapped (Mailgun, SES, SMTP) by writing a new implementation, and `Core.Application` stays free of third-party SDK types.
 
 ---
 

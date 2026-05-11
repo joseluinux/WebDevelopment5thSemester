@@ -5,14 +5,22 @@ Unit tests for business logic in `Core.Application`. Tests run in-process with n
 ```
 Core.UnitTests/
 ├── Auth/
-│   ├── RegisterHandlerTests.cs   ← 2 tests for the Register use case
-│   ├── LoginHandlerTests.cs      ← 3 tests for the Login use case
-│   ├── GetMeHandlerTests.cs      ← 2 tests for the GetMe use case
-│   └── RefreshHandlerTests.cs    ← 3 tests for the Refresh use case
+│   ├── RegisterHandlerTests.cs        ← 2 tests for the Register use case
+│   ├── LoginHandlerTests.cs           ← 3 tests for the Login use case
+│   ├── GetMeHandlerTests.cs           ← 2 tests for the GetMe use case
+│   ├── RefreshHandlerTests.cs         ← 3 tests for the Refresh use case
+│   ├── ForgotPasswordHandlerTests.cs  ← 2 tests for the ForgotPassword use case
+│   └── ResetPasswordHandlerTests.cs   ← 4 tests for the ResetPassword use case
+├── Users/
+│   └── UpdateProfileHandlerTests.cs   ← 2 tests for the UpdateProfile use case
 ├── Meis/
-│   └── MeiHandlerTests.cs        ← 3 tests covering the MEI CRUD security surface
-└── Transactions/
-    └── CreateTransactionHandlerTests.cs  ← 3 tests for CreateTransaction
+│   └── MeiHandlerTests.cs             ← 3 tests covering the MEI CRUD security surface
+├── Employees/
+│   └── CreateEmployeeHandlerTests.cs  ← 3 tests for CreateEmployee
+├── Transactions/
+│   └── CreateTransactionHandlerTests.cs  ← 3 tests for CreateTransaction
+└── Products/
+    └── CreateProductHandlerTests.cs   ← 3 tests for CreateProduct
 ```
 
 ---
@@ -73,6 +81,30 @@ The last two tests assert the same exception type and confirm no side effects �
 
 ---
 
+### `ForgotPasswordHandlerTests`
+
+Mocks `IUserRepository`, `IPasswordResetTokenRepository`, and `IEmailService`. Covers the critical user-enumeration defence: the handler's behaviour must be observably identical for registered and unregistered emails.
+
+| Test | Scenario | Expected |
+|---|---|---|
+| `HandleAsync_ValidEmail_PersistsTokenAndSendsEmail` | Email is registered | `AddAsync` called once (row persisted before email send); `SendPasswordResetEmailAsync` called once with the correct recipient address — reset-link value is not asserted (CSPRNG output) |
+| `HandleAsync_UnknownEmail_ReturnsSilentlyWithoutSideEffects` | Email is not registered | Returns normally (no exception); `AddAsync` never called; `SendPasswordResetEmailAsync` never called |
+
+---
+
+### `ResetPasswordHandlerTests`
+
+Mocks `IPasswordResetTokenRepository` and `IUserRepository`. Tests confirm that all three failure modes produce the same exception (user-enumeration / replay-resistance), and that the happy path writes in the correct order (password update → mark used).
+
+| Test | Scenario | Expected |
+|---|---|---|
+| `HandleAsync_ValidToken_UpdatesPasswordAndMarksUsed` | Token fresh, unused | `UpdateAsync` called once; `MarkAsUsedAsync` called once — confirms both writes happened and the token cannot be reused |
+| `HandleAsync_TokenNotFound_ThrowsInvalidResetTokenException` | Token string not in DB | Throws `InvalidResetTokenException`; no writes |
+| `HandleAsync_ExpiredToken_ThrowsInvalidResetTokenException` | Token in DB, `ExpiresAt` in the past, `IsUsed = false` | Throws `InvalidResetTokenException`; no writes — expiration alone is enough to reject |
+| `HandleAsync_AlreadyUsedToken_ThrowsInvalidResetTokenException` | `IsUsed = true`, `ExpiresAt` in the future | Throws `InvalidResetTokenException`; no writes — single-use enforcement holds even within the TTL |
+
+---
+
 ### `MeiHandlerTests`
 
 Tests are distributed across `CreateMeiHandler` and `GetMeiHandler`. The two ownership-failure cases (`MeiNotFoundException`, `UnauthorizedAccessException`) only arise in handlers that load an existing MEI (Get/Update/Delete). Testing them once on `GetMei` is sufficient — the ownership check is line-for-line identical in `UpdateMei` and `DeleteMei`.
@@ -94,6 +126,41 @@ Mocks both `ITransactionRepository` and `IMeiRepository`. Tests confirm the crit
 | `HandleAsync_ValidData_CallsAddAsyncOnce` | Caller owns the MEI, `type = "income"` | `AddAsync` called once; `TransactionResult` has correct `MeiId`, `Type`, `Amount` and a non-empty `Id` |
 | `HandleAsync_MeiOwnedByDifferentUser_ThrowsUnauthorizedAccessException` | MEI exists but `mei.UserId ≠ command.UserId` | Throws `UnauthorizedAccessException`; `AddAsync` never called — handler aborted before touching the transactions table |
 | `HandleAsync_InvalidType_ThrowsInvalidTransactionTypeException` | Caller owns the MEI, `type = "transfer"` | Throws `InvalidTransactionTypeException`; `AddAsync` never called |
+
+---
+
+### `UpdateProfileHandlerTests`
+
+Mocks `IUserRepository`. Covers the email-uniqueness guard during profile updates.
+
+| Test | Scenario | Expected |
+|---|---|---|
+| `HandleAsync_ValidData_CallsUpdateAsyncOnce` | New name + new email that is free | `UpdateAsync` called once; returned `GetProfileResult` reflects updated `Name` and `Email` |
+| `HandleAsync_EmailTakenByAnotherUser_ThrowsEmailAlreadyTakenException` | Requested email belongs to a different user | Throws `EmailAlreadyTakenException`; `UpdateAsync` never called — multi-tenant uniqueness invariant holds |
+
+---
+
+### `CreateEmployeeHandlerTests`
+
+Mocks `IEmployeeRepository` and `IMeiRepository`. Mirrors the `CreateProductHandlerTests` / `CreateTransactionHandlerTests` pattern: ownership check first, then input validation.
+
+| Test | Scenario | Expected |
+|---|---|---|
+| `HandleAsync_ValidData_CallsAddAsyncOnce` | Caller owns the MEI, `contractType = "clt"`, positive salary | `AddAsync` called once |
+| `HandleAsync_InvalidContractType_ThrowsInvalidContractTypeException` | Caller owns MEI, `contractType = "freelancer"` (not in allowed set) | Throws `InvalidContractTypeException`; `AddAsync` never called |
+| `HandleAsync_SalaryEqualToZero_ThrowsInvalidSalaryException` | Caller owns MEI, valid contract type, `salary = 0` | Throws `InvalidSalaryException`; `AddAsync` never called |
+
+---
+
+### `CreateProductHandlerTests`
+
+Mocks `IProductRepository` and `IMeiRepository`.
+
+| Test | Scenario | Expected |
+|---|---|---|
+| `HandleAsync_ValidData_CallsAddAsyncOnce` | Caller owns MEI, valid status, `price > 0` | `AddAsync` called once; `ProductResult.Margin > DesiredMargin` and `IsMarginBelowDesired = false` for the chosen test values |
+| `HandleAsync_InvalidStatus_ThrowsInvalidProductStatusException` | Status = `"draft"` (not in allowed set) | Throws `InvalidProductStatusException`; `AddAsync` never called |
+| `HandleAsync_PriceEqualToZero_ThrowsInvalidProductPriceException` | `price = 0` | Throws `InvalidProductPriceException`; `AddAsync` never called — zero price would divide by zero in the margin formula |
 
 ---
 
