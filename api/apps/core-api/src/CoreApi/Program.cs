@@ -1,10 +1,13 @@
 using System.Text;
 using Core.Application.Auth;
+using Core.Application.Interfaces;
+using Core.Application.UseCases.Auth.ForgotPassword;
 using Core.Application.UseCases.Auth.GetMe;
 using Core.Application.UseCases.Auth.Login;
 using Core.Application.UseCases.Auth.Logout;
 using Core.Application.UseCases.Auth.Refresh;
 using Core.Application.UseCases.Auth.Register;
+using Core.Application.UseCases.Auth.ResetPassword;
 using Core.Application.UseCases.Employees.CreateEmployee;
 using Core.Application.UseCases.Employees.GetEmployees;
 using Core.Application.UseCases.Meis.CreateMei;
@@ -28,6 +31,8 @@ using Core.Application.UseCases.Users.UpdateProfile;
 using Core.Domain.Interfaces;
 using Core.Infrastructure.Persistence;
 using Core.Infrastructure.Persistence.Repositories;
+using Core.Infrastructure.Services;
+using CoreApi.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -149,6 +154,25 @@ builder.Services.AddScoped<DeleteProductHandler>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<GetEmployeesHandler>();
 builder.Services.AddScoped<CreateEmployeeHandler>();
+
+// Forgot/Reset password — repository, email service, and handlers.
+builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+builder.Services.AddScoped<ForgotPasswordHandler>();
+builder.Services.AddScoped<ResetPasswordHandler>();
+
+// Resend wiring.
+//   - AddResend() (our small helper) registers IResend + HttpClient and
+//     binds the ApiToken from configuration.
+//   - The Resend section also carries FromEmail, which the email service
+//     reads via a separately registered ResendSettings POCO.
+builder.Services.AddResend(options =>
+    options.ApiToken = builder.Configuration["Resend:ApiKey"] ?? string.Empty);
+builder.Services.AddSingleton(new ResendSettings
+{
+    ApiKey = builder.Configuration["Resend:ApiKey"] ?? string.Empty,
+    FromEmail = builder.Configuration["Resend:FromEmail"] ?? string.Empty
+});
+builder.Services.AddScoped<IEmailService, ResendEmailService>();
 
 var app = builder.Build();
 

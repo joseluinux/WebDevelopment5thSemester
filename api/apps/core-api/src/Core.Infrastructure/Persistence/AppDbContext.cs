@@ -35,6 +35,10 @@ public partial class AppDbContext : DbContext
     // Persisted refresh tokens. Owned/queried only by the auth use cases.
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
+    // Persisted single-use password-reset tokens. Owned/queried only by
+    // the forgot/reset-password use cases.
+    public virtual DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+
    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -419,6 +423,54 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("refresh_tokens_user_id_fkey");
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            // PK / table naming follows the rest of the schema.
+            entity.HasKey(e => e.Id).HasName("password_reset_tokens_pkey");
+
+            entity.ToTable("password_reset_tokens");
+
+            // Unique index on Token: tokens are 64 random bytes base64-encoded,
+            // so collisions are vanishingly unlikely — but we enforce
+            // uniqueness at the DB so a buggy duplicate surfaces as a
+            // constraint violation instead of silent reuse. Indexing also
+            // keeps the per-token lookup at O(log n).
+            entity.HasIndex(e => e.Token, "password_reset_tokens_token_key").IsUnique();
+
+            // FK-side index — speeds up future "revoke all for user" queries
+            // and audit lookups by user.
+            entity.HasIndex(e => e.UserId, "idx_password_reset_tokens_user_id");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            // 64-byte CSPRNG output base64-encoded ≈ 88 chars; 512 leaves
+            // headroom for any future encoding change.
+            entity.Property(e => e.Token)
+                .HasMaxLength(512)
+                .HasColumnName("token");
+            entity.Property(e => e.ExpiresAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("expires_at");
+            entity.Property(e => e.IsUsed)
+                .HasDefaultValue(false)
+                .HasColumnName("is_used");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+
+            // FK to Users.Id with CASCADE — deleting a user wipes any
+            // outstanding reset tokens, matching the same policy as
+            // refresh_tokens. Orphan auth artefacts would be a liability.
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("password_reset_tokens_user_id_fkey");
         });
 
         OnModelCreatingPartial(modelBuilder);

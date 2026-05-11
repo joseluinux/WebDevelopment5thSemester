@@ -6,7 +6,7 @@
 
 set -uo pipefail
 
-API="http://127.0.0.1:5027"
+API="http://127.0.0.1:8080"
 NAME="Employees Test"
 EMAIL="employees-test@lumemei.com"
 PASSWORD="test123"

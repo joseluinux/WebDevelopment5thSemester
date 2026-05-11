@@ -13,21 +13,28 @@ Core.Domain/
 │   ├── Import.cs
 │   ├── Document.cs
 │   ├── AiRecommendation.cs
-│   └── RefreshToken.cs
+│   ├── RefreshToken.cs
+│   └── PasswordResetToken.cs
 ├── Interfaces/           ← repository contracts (implemented by Core.Infrastructure)
 │   ├── IUserRepository.cs
 │   ├── IRefreshTokenRepository.cs
+│   ├── IPasswordResetTokenRepository.cs
 │   ├── IMeiRepository.cs
+│   ├── IEmployeeRepository.cs
 │   ├── ITransactionRepository.cs
 │   └── IProductRepository.cs
 └── Exceptions/           ← domain exceptions (thrown by application handlers)
     ├── EmailAlreadyTakenException.cs
     ├── InvalidCredentialsException.cs
     ├── InvalidRefreshTokenException.cs
+    ├── InvalidResetTokenException.cs
     ├── InvalidTransactionTypeException.cs
     ├── InvalidProductStatusException.cs
     ├── InvalidProductPriceException.cs
+    ├── InvalidContractTypeException.cs
+    ├── InvalidSalaryException.cs
     ├── MeiNotFoundException.cs
+    ├── EmployeeNotFoundException.cs
     ├── ProductNotFoundException.cs
     ├── TransactionNotFoundException.cs
     └── UserNotFoundException.cs
@@ -189,6 +196,22 @@ Rows are never deleted. Keeping them enables audit trails ("when did this sessio
 
 ---
 
+### `PasswordResetToken`
+A persisted server-side token authorising a single password reset. The user receives the opaque token string by email; all validity metadata lives in this row.
+
+| Property | Type | Description |
+|---|---|---|
+| `Id` | `Guid` | Primary key (`uuid_generate_v4()`) |
+| `UserId` | `Guid` | FK → `User` (cascade delete) |
+| `Token` | `string` | Opaque CSPRNG string sent to the user by email (unique index, max 512 chars) |
+| `ExpiresAt` | `DateTime` | Absolute UTC expiry — fixed at 1 hour from issue time |
+| `IsUsed` | `bool` | Single-use flag; set to `true` on first successful redemption |
+| `CreatedAt` | `DateTime` | Record creation timestamp |
+
+Rows are never physically deleted. Keeping them enables audit trails and detection of replay attempts (reuse of an expired or already-redeemed token is a strong signal that a reset link was intercepted).
+
+---
+
 ### `AiRecommendation`
 An AI-generated insight or recommendation produced for a `Mei`.
 
@@ -213,9 +236,11 @@ Repository contracts that `Core.Infrastructure` must implement, following the De
 Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
 Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 Task AddAsync(User user, CancellationToken cancellationToken = default);
+Task UpdateAsync(User user, CancellationToken cancellationToken = default);
+Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 ```
 
-The nullable return type on both `Get*` methods explicitly communicates that "not found" is a valid, expected outcome — not an exceptional case that should throw. `GetByIdAsync` is used by authenticated endpoints that already know which user to load (via the JWT `sub` claim).
+The nullable return type on both `Get*` methods explicitly communicates that "not found" is a valid, expected outcome — not an exceptional case that should throw. `GetByIdAsync` is used by authenticated endpoints that already know which user to load (via the JWT `sub` claim). `DeleteAsync` removes the row and relies on `ON DELETE CASCADE` constraints to remove all dependent rows (refresh tokens, MEIs, and every grandchild); the repository never manually cascades.
 
 ### `IRefreshTokenRepository`
 
@@ -226,6 +251,26 @@ Task RevokeAsync(RefreshToken refreshToken, CancellationToken cancellationToken 
 ```
 
 Intentionally minimal — no `GetByUserAsync`, no `DeleteAsync`. The surface area is kept small until a real use case demands more. `RevokeAsync` performs a soft delete (sets `IsRevoked = true`, keeps the row).
+
+### `IPasswordResetTokenRepository`
+
+```csharp
+Task AddAsync(PasswordResetToken token, CancellationToken cancellationToken = default);
+Task<PasswordResetToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default);
+Task MarkAsUsedAsync(Guid id, CancellationToken cancellationToken = default);
+```
+
+Narrow surface by design — forgot-password creates a row, reset-password reads it and marks it used. `MarkAsUsedAsync` performs a soft consume (sets `IsUsed = true`, keeps the row for audit and replay detection). `GetByTokenAsync` returns `null` when not found; the handler treats "not found", "expired", and "already used" as the same `InvalidResetTokenException` to prevent enumeration.
+
+### `IEmployeeRepository`
+
+```csharp
+Task<IReadOnlyList<Employee>> GetAllByMeiIdAsync(Guid meiId, CancellationToken cancellationToken = default);
+Task<Employee?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+Task AddAsync(Employee employee, CancellationToken cancellationToken = default);
+```
+
+Smaller surface than the other CRUD repositories — only List, GetById, and Add are shipped; Update/Delete will be added when their use cases land. `GetByIdAsync` is not used by this slice's two handlers (List + Create) but is kept on the interface so future per-employee endpoints can build on it without expanding the contract.
 
 ### `IMeiRepository`
 
@@ -315,7 +360,25 @@ Thrown when a MEI lookup by id returns no row. Controllers map this to `404 Not 
 **Important:** this exception is thrown only when a row genuinely does not exist. When the row exists but belongs to a different user, handlers throw `UnauthorizedAccessException` instead (→ `403 Forbidden`). The distinction is intentional: `403` is a clearer signal during development and operations, and GUID ids are not enumerable so the small information disclosure (confirming some row exists) is an accepted trade-off.
 
 ### `UserNotFoundException`
-Thrown from authenticated use cases (e.g. `GetMeHandler`) when a valid JWT references a user that no longer exists (account deleted after the token was issued). This is intentionally distinct from `InvalidCredentialsException`: in an already-authenticated context the caller owns the token, so revealing "this id is gone" leaks nothing an attacker does not already know. Controllers map this to `404 Not Found`.
+Thrown from authenticated use cases (e.g. `GetMeHandler`, `GetProfileHandler`, `UpdateProfileHandler`, `DeleteAccountHandler`) when a valid JWT references a user that no longer exists (account deleted after the token was issued). This is intentionally distinct from `InvalidCredentialsException`: in an already-authenticated context the caller owns the token, so revealing "this id is gone" leaks nothing an attacker does not already know. Controllers map this to `404 Not Found`.
+
+### `InvalidResetTokenException`
+Thrown by `ResetPasswordHandler` when the supplied reset token is unknown, expired, or already used. A single exception covers all three failure modes — the same user-enumeration / replay-resistance defence used by `InvalidCredentialsException` and `InvalidRefreshTokenException`. An attacker holding an intercepted, expired, or replayed link cannot distinguish any of the three outcomes. Controllers map this to `400 Bad Request`.
+
+### `EmployeeNotFoundException`
+Thrown when an employee lookup by id finds no row **or** when the row exists but does not belong to the MEI in the URL (cross-MEI probe resistance, same dual-cause pattern as `ProductNotFoundException` and `TransactionNotFoundException`). Not used by the initial List + Create slice, but reserved for future per-employee endpoints. Controllers map this to `404 Not Found`.
+
+### `InvalidContractTypeException`
+Thrown when a Create employee command carries a `ContractType` outside the allowed set. Exposes the canonical list:
+
+```csharp
+public static readonly IReadOnlyList<string> ValidContractTypes = new[] { "clt", "pj", "intern" };
+```
+
+`"clt"` is the Brazilian formal employment contract; `"pj"` is a service contractor arrangement; `"intern"` is governed by Lei do Estágio. Controllers map this to `400 Bad Request`.
+
+### `InvalidSalaryException`
+Thrown when a Create employee command carries a `Salary <= 0`. Zero or negative pay makes no business sense for any contract type and would produce misleading TotalCost calculations downstream. Controllers map this to `400 Bad Request`.
 
 ---
 

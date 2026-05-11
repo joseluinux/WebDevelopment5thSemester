@@ -10,10 +10,14 @@ CoreApi/
 ├── appsettings.json         ← default configuration (checked in, no secrets)
 ├── appsettings.Development.json  ← local overrides (git-ignored)
 ├── Controllers/
-│   ├── AuthController.cs        ← all /v1/auth/* endpoints
-│   ├── MeiController.cs         ← all /v1/meis/* endpoints
+│   ├── AuthController.cs         ← all /v1/auth/* endpoints
+│   ├── UsersController.cs        ← all /v1/users/* endpoints
+│   ├── MeiController.cs          ← all /v1/meis/* endpoints
+│   ├── EmployeesController.cs    ← all /v1/meis/{meiId}/employees/* endpoints
 │   ├── TransactionsController.cs ← all /v1/meis/{meiId}/transactions/* endpoints
 │   └── ProductsController.cs     ← all /v1/meis/{meiId}/products/* endpoints
+├── Extensions/
+│   └── ResendServiceCollectionExtensions.cs  ← AddResend() DI helper for the Resend SDK
 └── Middlewares/             ← custom middleware (empty — reserved for future use)
 ```
 
@@ -26,6 +30,7 @@ CoreApi/
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | 9.0.4 | JWT bearer middleware for validating access tokens |
 | `Swashbuckle.AspNetCore` | 10.1.7 | Swagger/OpenAPI UI (`/swagger`) in development |
 | `Microsoft.EntityFrameworkCore.Design` | 9.0.4 | EF Core CLI tooling (`dotnet ef migrations`) — dev-only |
+| `Resend` | 0.5.0 | Resend transactional email SDK (used by `ResendEmailService` in Core.Infrastructure) |
 
 ---
 
@@ -64,6 +69,18 @@ All dependency wiring happens here. Nothing is auto-discovered; every binding is
 | `CreateProductHandler` | Scoped | concrete class |
 | `UpdateProductHandler` | Scoped | concrete class |
 | `DeleteProductHandler` | Scoped | concrete class |
+| `IEmployeeRepository` | Scoped | `EmployeeRepository` |
+| `GetEmployeesHandler` | Scoped | concrete class |
+| `CreateEmployeeHandler` | Scoped | concrete class |
+| `GetProfileHandler` | Scoped | concrete class |
+| `UpdateProfileHandler` | Scoped | concrete class |
+| `DeleteAccountHandler` | Scoped | concrete class |
+| `IPasswordResetTokenRepository` | Scoped | `PasswordResetTokenRepository` |
+| `ForgotPasswordHandler` | Scoped | concrete class |
+| `ResetPasswordHandler` | Scoped | concrete class |
+| `ResendSettings` | Singleton | bound from `appsettings.json → Resend` section |
+| `IEmailService` | Scoped | `ResendEmailService` |
+| `IResend` (via `AddHttpClient`) | Transient | `ResendClient` (managed by `IHttpClientFactory`) |
 
 `JwtSettings` is registered as the concrete type (not `IOptions<JwtSettings>`) so handlers can take a plain dependency — keeping `Core.Application` free of `Microsoft.Extensions.Options` coupling and making unit tests trivial (`new JwtSettings { ... }`).
 
@@ -175,6 +192,42 @@ Request body (`TokenDto`):
 
 ---
 
+### `POST /v1/auth/forgot-password`
+
+Requests a password-reset email. No `[Authorize]` — the caller cannot log in by definition.
+
+**Always returns `200 OK`**, regardless of whether the email is registered — a different response for an unknown email would let an attacker harvest valid addresses. Infrastructure failures (DB down, email provider error) still bubble to `500`.
+
+Request body (`ForgotPasswordDto`):
+```json
+{ "email": "maria@example.com" }
+```
+
+| Outcome | HTTP response |
+|---|---|
+| Email registered | `200 OK` (link sent) |
+| Email not registered | `200 OK` (silent no-op) |
+
+---
+
+### `POST /v1/auth/reset-password`
+
+Redeems a reset token and applies the new password. No `[Authorize]` — the reset token is the credential.
+
+Request body (`ResetPasswordDto`):
+```json
+{ "token": "<opaque token from email>", "newPassword": "newSecret123" }
+```
+
+| Outcome | HTTP response |
+|---|---|
+| Token valid, unused, not expired | `200 OK` (empty body) |
+| Token not found / expired / already used | `400 Bad Request` `{ "error": "Invalid or expired password reset token." }` |
+
+All three failure modes produce the same generic error — an attacker cannot distinguish an intercepted link from an expired one from an already-redeemed one.
+
+---
+
 ## Auth DTOs (`AuthController.cs`)
 
 All auth DTOs are defined as `record` types directly in `AuthController.cs`.
@@ -184,6 +237,8 @@ All auth DTOs are defined as `record` types directly in `AuthController.cs`.
 | `RegisterDto(string Name, string Email, string Password)` | `POST /register` |
 | `LoginDto(string Email, string Password)` | `POST /login` |
 | `TokenDto(string Token)` | `POST /refresh` and `POST /logout` (same wire format) |
+| `ForgotPasswordDto(string Email)` | `POST /forgot-password` |
+| `ResetPasswordDto(string Token, string NewPassword)` | `POST /reset-password` |
 
 ---
 
@@ -200,11 +255,59 @@ All auth DTOs are defined as `record` types directly in `AuthController.cs`.
     "Audience": "LumeMEI.Clients",
     "AccessTokenExpirationMinutes": 15,
     "RefreshTokenExpirationDays": 30
+  },
+  "Resend": {
+    "ApiKey": "re_...",
+    "FromEmail": "noreply@lumemei.com.br"
   }
 }
 ```
 
 `appsettings.json` is checked in with placeholder values. Real values are supplied via `appsettings.Development.json` (local, git-ignored) or environment variables / secret manager in production.
+
+---
+
+---
+
+## `Controllers/UsersController`
+
+Base route: `v1/users`. `[Authorize]` at the class level. Every action operates on the caller's own account — `UserId` always comes from the JWT; the body has no `UserId` field.
+
+### `GET /v1/users/me`
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` `{ "id": "...", "name": "...", "email": "...", "createdAt": "..." }` |
+| Missing/invalid JWT | `401` (auto) |
+| JWT valid, `sub` not a `Guid` | `401` `{ "error": "Invalid token subject." }` |
+| JWT valid, user deleted | `404` |
+
+### `PUT /v1/users/me`
+
+Request body (`UpdateProfileDto`): `{ "name"?, "email" }`
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `200 OK` + updated profile (same shape as GET) |
+| Missing/invalid JWT | `401` (auto) |
+| JWT valid, user deleted | `404` |
+| New email taken by another user | `409 Conflict` |
+
+### `DELETE /v1/users/me`
+
+Hard-deletes the caller's account. All dependent rows are removed by DB CASCADE constraints — no body needed.
+
+| Outcome | HTTP response |
+|---|---|
+| Success | `204 No Content` |
+| Missing/invalid JWT | `401` (auto) |
+| JWT valid, user deleted | `404` |
+
+### DTOs
+
+| DTO | Fields |
+|---|---|
+| `UpdateProfileDto(string? Name, string Email)` | No `UserId` — ownership always from JWT |
 
 ---
 
@@ -272,6 +375,46 @@ Request body (`UpdateMeiDto`): `{ "name", "cnae"?, "annualLimit"?, "plan"? }` �
 | `UpdateMeiDto` | `Name`, `Cnae?`, `AnnualLimit?`, `Plan?` |
 
 Neither DTO has a `UserId` field — ownership is always derived from the JWT, never from the body.
+
+---
+
+---
+
+## `Controllers/EmployeesController`
+
+Base route: `v1/meis/{meiId:guid}/employees`. `[Authorize]` at the class level. Same `TryGetUserId()` dual-claim helper as the other controllers.
+
+This slice ships only List and Create. Per-employee Get/Update/Delete will be added when those use cases land.
+
+### `GET /v1/meis/{meiId}/employees`
+
+| Outcome | HTTP |
+|---|---|
+| Success | `200 OK` — JSON array of `GetEmployeesResult`, newest first then alphabetical by name |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+
+Each row includes `totalCost` (`salary + charges`) computed by the handler.
+
+### `POST /v1/meis/{meiId}/employees`
+
+Request body (`CreateEmployeeDto`): `{ "name", "contractType", "salary", "charges" }`
+
+| Outcome | HTTP |
+|---|---|
+| Success | `201 Created` (no body — no per-employee URL to put in a `Location` header yet) |
+| Missing/invalid JWT | `401` (auto) |
+| MEI not found | `404` |
+| MEI owned by another user | `403` |
+| Invalid contract type | `400` `{ "error": "Invalid contract type '...'. Allowed: clt, pj, intern." }` |
+| Salary ≤ 0 | `400` |
+
+### DTOs
+
+| DTO | Fields |
+|---|---|
+| `CreateEmployeeDto(string Name, string ContractType, decimal Salary, decimal Charges)` | No `MeiId`/`UserId` — from URL/JWT |
 
 ---
 

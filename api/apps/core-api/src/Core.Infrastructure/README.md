@@ -6,16 +6,22 @@ Depends on: `Core.Domain`, `Core.Application` (for entity types), EF Core, Npgsq
 
 ```
 Core.Infrastructure/
-└── Persistence/
-    ├── AppDbContext.cs
-    ├── Migrations/
-    │   └── 20260509191608_AddRefreshTokens.cs  ← adds the refresh_tokens table
-    └── Repositories/
-        ├── UserRepository.cs
-        ├── RefreshTokenRepository.cs
-        ├── MeiRepository.cs
-        ├── TransactionRepository.cs
-        └── ProductRepository.cs
+├── Persistence/
+│   ├── AppDbContext.cs
+│   ├── Migrations/
+│   │   ├── 20260509191608_AddRefreshTokens.cs        ← adds the refresh_tokens table
+│   │   └── 20260511195950_AddPasswordResetTokens.cs  ← adds the password_reset_tokens table
+│   └── Repositories/
+│       ├── UserRepository.cs
+│       ├── RefreshTokenRepository.cs
+│       ├── PasswordResetTokenRepository.cs
+│       ├── MeiRepository.cs
+│       ├── EmployeeRepository.cs
+│       ├── TransactionRepository.cs
+│       └── ProductRepository.cs
+└── Services/
+    ├── ResendEmailService.cs   ← IEmailService implementation (Resend SDK)
+    └── ResendSettings.cs       ← POCO bound to the "Resend" appsettings section
 ```
 
 ---
@@ -37,6 +43,7 @@ Core.Infrastructure/
 | `Documents` | `documents` |
 | `AiRecommendations` | `ai_recommendations` |
 | `RefreshTokens` | `refresh_tokens` |
+| `PasswordResetTokens` | `password_reset_tokens` |
 
 ### `refresh_tokens` model configuration
 
@@ -44,6 +51,13 @@ Core.Infrastructure/
 - `user_id` is indexed and carries `ON DELETE CASCADE` — deleting a user removes all their refresh tokens.
 - `is_revoked` defaults to `false`; `created_at` defaults to `CURRENT_TIMESTAMP`.
 - Rows are never physically deleted (soft revoke only).
+
+### `password_reset_tokens` model configuration
+
+- `token` column has a unique index (`password_reset_tokens_token_key`) — same rationale as `refresh_tokens.token`.
+- `user_id` is indexed and carries `ON DELETE CASCADE` — deleting a user removes all their reset tokens.
+- `is_used` defaults to `false`; `created_at` defaults to `CURRENT_TIMESTAMP`.
+- Rows are never physically deleted — keeping them enables audit trails and detection of replay attempts.
 
 ### Notable model configuration
 
@@ -115,21 +129,79 @@ Implements `ITransactionRepository`.
 
 Implements `IUserRepository` (defined in `Core.Domain.Interfaces`).
 
-| Method | EF operation |
-|---|---|
-| `GetByEmailAsync` | `FirstOrDefaultAsync` — returns `null` when not found, matching the nullable contract |
-| `GetByIdAsync` | `FindAsync` — checks the EF change tracker before issuing SQL; returns `null` when the row does not exist |
-| `AddAsync` | `AddAsync` + `SaveChangesAsync` — stages and flushes in a single transaction |
+| Method | EF operation | Notes |
+|---|---|---|
+| `GetByEmailAsync` | `FirstOrDefaultAsync` | Returns `null` when not found, matching the nullable contract |
+| `GetByIdAsync` | `FindAsync` | Checks the EF change tracker before issuing SQL; returns `null` when the row does not exist |
+| `AddAsync` | `AddAsync` + `SaveChangesAsync` | Stages and flushes in a single transaction |
+| `UpdateAsync` | `Update` + `SaveChangesAsync` | Idempotent whether entity is tracked or detached |
+| `DeleteAsync` | `FindAsync` → `Remove` → `SaveChangesAsync` | Find-then-Remove pattern (same rationale as `TransactionRepository`): `DeleteAccountHandler` loads the user earlier in the same scope, so attaching a fresh stub would throw a tracker conflict |
 
-`FindAsync` is preferred over `FirstOrDefaultAsync(u => u.Id == id)` for primary-key lookups because it avoids a round-trip when the entity is already tracked in the same DbContext scope (e.g. earlier in the same request).
+`FindAsync` is preferred over `FirstOrDefaultAsync(u => u.Id == id)` for primary-key lookups because it avoids a round-trip when the entity is already tracked in the same DbContext scope.
 
 The repository takes `AppDbContext` via constructor injection. It never returns EF-tracked objects outside its own methods — callers in `Core.Application` receive plain entity instances.
 
 ---
 
+---
+
+## `Persistence/Repositories/PasswordResetTokenRepository`
+
+Implements `IPasswordResetTokenRepository`.
+
+| Method | EF operation | Notes |
+|---|---|---|
+| `AddAsync` | `AddAsync` + `SaveChangesAsync` | Flush immediately; the token must exist in DB before the email is sent |
+| `GetByTokenAsync` | `FirstOrDefaultAsync` on the unique-indexed `token` column | Indexed seek |
+| `MarkAsUsedAsync` | `FindAsync` → set `IsUsed = true` → `SaveChangesAsync` | Find-then-mutate pattern: `ResetPasswordHandler` already loaded the row via `GetByTokenAsync` in the same scope — attaching a stub would throw a tracker conflict |
+
+Rows are never deleted (same audit/replay rationale as `RefreshTokenRepository`).
+
+---
+
+## `Persistence/Repositories/EmployeeRepository`
+
+Implements `IEmployeeRepository`.
+
+| Method | EF operation | Notes |
+|---|---|---|
+| `GetAllByMeiIdAsync` | `AsNoTracking().Where(…).OrderByDescending(…).ThenBy(…).ToListAsync` | `AsNoTracking` — results projected to a DTO, never mutated. Sorted newest first, then alphabetical by name |
+| `GetByIdAsync` | `FindAsync` | Change-tracker aware; entity returned tracked so future Update handlers can mutate without re-attaching |
+| `AddAsync` | `AddAsync` + `SaveChangesAsync` | |
+
+---
+
+## `Services/ResendEmailService`
+
+Implements `IEmailService` (defined in `Core.Application.Interfaces`).
+
+Wraps the Resend SDK (`IResend`) to send transactional email. Receives `ResendSettings` (bound from `appsettings.json → "Resend"`) for the `From` address.
+
+Email content (HTML + text fallback) is built here, not in the handler — handlers should not render markup, and centralising the template makes branding/copy changes a one-file edit.
+
+Subject and body are in Portuguese per the product's user-facing language (`pt-BR`). The handler call path: `ForgotPasswordHandler` → `IEmailService.SendPasswordResetEmailAsync` → `ResendEmailService` → `IResend.EmailSendAsync`.
+
+---
+
+## `Services/ResendSettings`
+
+Plain POCO mirroring the `"Resend"` section of `appsettings.json`.
+
+| Property | Description |
+|---|---|
+| `ApiKey` | Resend API key — passed to `ResendClientOptions.ApiToken` by the composition root |
+| `FromEmail` | Sender address displayed to recipients (e.g. `noreply@lumemei.com.br`) |
+
+---
+
 ## Migrations
 
-The schema was originally scaffolded from Supabase (no prior migration baseline). The first migration `AddRefreshTokens` adds only the `refresh_tokens` table — the Up/Down methods were trimmed to exclude the existing Supabase tables that would fail if re-created. The model snapshot is left intact so future migrations compute correct deltas.
+The schema was originally scaffolded from Supabase (no prior migration baseline). Each migration adds only the new table — Up/Down methods are trimmed to exclude existing Supabase tables that would fail if re-created. The model snapshot is left intact so future migrations compute correct deltas.
+
+| Migration | Adds |
+|---|---|
+| `20260509191608_AddRefreshTokens` | `refresh_tokens` table |
+| `20260511195950_AddPasswordResetTokens` | `password_reset_tokens` table |
 
 To apply:
 ```bash
@@ -149,6 +221,17 @@ The connection string is read from `appsettings.json` under the key `ConnectionS
 ```
 
 The Supabase connection string (Npgsql format) is available in the Supabase dashboard under **Project Settings → Database → Connection string → .NET**.
+
+Email sending also requires a `"Resend"` section:
+
+```json
+"Resend": {
+  "ApiKey": "re_...",
+  "FromEmail": "noreply@lumemei.com.br"
+}
+```
+
+For local development, override these in `appsettings.Development.json` (git-ignored).
 
 ---
 
