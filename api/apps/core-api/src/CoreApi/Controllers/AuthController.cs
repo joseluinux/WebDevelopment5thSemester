@@ -1,10 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Core.Application.UseCases.Auth.ForgotPassword;
 using Core.Application.UseCases.Auth.GetMe;
 using Core.Application.UseCases.Auth.Login;
 using Core.Application.UseCases.Auth.Logout;
 using Core.Application.UseCases.Auth.Refresh;
 using Core.Application.UseCases.Auth.Register;
+using Core.Application.UseCases.Auth.ResetPassword;
 using Core.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,19 +24,25 @@ public class AuthController : ControllerBase
     private readonly GetMeHandler _getMeHandler;
     private readonly RefreshHandler _refreshHandler;
     private readonly LogoutHandler _logoutHandler;
+    private readonly ForgotPasswordHandler _forgotPasswordHandler;
+    private readonly ResetPasswordHandler _resetPasswordHandler;
 
     public AuthController(
         RegisterHandler registerHandler,
         LoginHandler loginHandler,
         GetMeHandler getMeHandler,
         RefreshHandler refreshHandler,
-        LogoutHandler logoutHandler)
+        LogoutHandler logoutHandler,
+        ForgotPasswordHandler forgotPasswordHandler,
+        ResetPasswordHandler resetPasswordHandler)
     {
         _registerHandler = registerHandler;
         _loginHandler = loginHandler;
         _getMeHandler = getMeHandler;
         _refreshHandler = refreshHandler;
         _logoutHandler = logoutHandler;
+        _forgotPasswordHandler = forgotPasswordHandler;
+        _resetPasswordHandler = resetPasswordHandler;
     }
 
     [HttpPost("register")]
@@ -170,6 +178,55 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = ex.Message });
         }
     }
+
+    // POST /v1/auth/forgot-password — request a password-reset email.
+    //
+    // No [Authorize]: the caller cannot log in (that's the whole point).
+    //
+    // ALWAYS returns 200 OK, regardless of whether the email is registered.
+    // This is a deliberate user-enumeration defence — returning a different
+    // status for "unknown email" would let an attacker harvest valid user
+    // emails by polling this endpoint. The handler itself silently returns
+    // for missing users; we don't even catch any exception, since the
+    // happy path here is "either we did the work, or we silently did
+    // nothing". A real failure (DB down, email provider down) bubbles up
+    // to the framework's 500 — that's fine, because it would tell the
+    // attacker exactly nothing about email validity.
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordDto dto,
+        CancellationToken cancellationToken)
+    {
+        await _forgotPasswordHandler.HandleAsync(
+            new ForgotPasswordCommand(dto.Email),
+            cancellationToken);
+        return Ok();
+    }
+
+    // POST /v1/auth/reset-password — exchange a reset token for a new password.
+    //
+    // No [Authorize]: the user can't authenticate yet — the reset token IS
+    // the credential.
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordDto dto,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _resetPasswordHandler.HandleAsync(
+                new ResetPasswordCommand(dto.Token, dto.NewPassword),
+                cancellationToken);
+            return Ok();
+        }
+        catch (InvalidResetTokenException ex)
+        {
+            // 400 Bad Request: the token is unknown, expired, or already used.
+            // Same generic message regardless of sub-cause (see
+            // InvalidResetTokenException for the rationale).
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }
 
 // RegisterDto is a transport-layer object (JSON body shape) and belongs here in the
@@ -185,3 +242,9 @@ public record LoginDto(string Email, string Password);
 // opaque refresh-token string. Kept as one DTO because the wire format is
 // identical; if the routes diverge in the future, split them then.
 public record TokenDto(string Token);
+
+// JSON body of POST /v1/auth/forgot-password.
+public record ForgotPasswordDto(string Email);
+
+// JSON body of POST /v1/auth/reset-password.
+public record ResetPasswordDto(string Token, string NewPassword);
