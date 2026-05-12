@@ -21,6 +21,7 @@ Core.Domain/
 │   ├── IPasswordResetTokenRepository.cs
 │   ├── IMeiRepository.cs
 │   ├── IEmployeeRepository.cs
+│   ├── IImportRepository.cs
 │   ├── ITransactionRepository.cs
 │   └── IProductRepository.cs
 └── Exceptions/           ← domain exceptions (thrown by application handlers)
@@ -35,6 +36,7 @@ Core.Domain/
     ├── InvalidSalaryException.cs
     ├── MeiNotFoundException.cs
     ├── EmployeeNotFoundException.cs
+    ├── ImportNotFoundException.cs
     ├── ProductNotFoundException.cs
     ├── TransactionNotFoundException.cs
     └── UserNotFoundException.cs
@@ -272,6 +274,17 @@ Task AddAsync(Employee employee, CancellationToken cancellationToken = default);
 
 Smaller surface than the other CRUD repositories — only List, GetById, and Add are shipped; Update/Delete will be added when their use cases land. `GetByIdAsync` is not used by this slice's two handlers (List + Create) but is kept on the interface so future per-employee endpoints can build on it without expanding the contract.
 
+### `IImportRepository`
+
+```csharp
+Task<IReadOnlyList<Import>> GetAllByMeiIdAsync(Guid meiId, CancellationToken cancellationToken = default);
+Task<Import?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+Task AddAsync(Import import, CancellationToken cancellationToken = default);
+Task UpdateAsync(Import import, CancellationToken cancellationToken = default);
+```
+
+`UpdateAsync` is required because `CreateImportHandler` mutates the same row twice in one request: once to mark it `"processing"` (persisted before the FastAPI call) and again to record the final status/counters/errors. The `GetByIdAsync` return is nullable — the handler maps "not found" and "exists under a different MEI" to the same `ImportNotFoundException` (cross-MEI probe resistance).
+
 ### `IMeiRepository`
 
 ```csharp
@@ -379,6 +392,9 @@ public static readonly IReadOnlyList<string> ValidContractTypes = new[] { "clt",
 
 ### `InvalidSalaryException`
 Thrown when a Create employee command carries a `Salary <= 0`. Zero or negative pay makes no business sense for any contract type and would produce misleading TotalCost calculations downstream. Controllers map this to `400 Bad Request`.
+
+### `ImportNotFoundException`
+Thrown when an import lookup by id finds no row **or** when the row exists but does not belong to the MEI in the URL (cross-MEI probe resistance, same dual-cause pattern as `ProductNotFoundException` and `TransactionNotFoundException`). Controllers map this to `404 Not Found`.
 
 ---
 

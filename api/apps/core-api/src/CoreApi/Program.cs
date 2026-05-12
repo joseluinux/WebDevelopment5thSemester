@@ -1,6 +1,8 @@
 using System.Text;
 using Core.Application.Auth;
 using Core.Application.Interfaces;
+using Core.Application.UseCases.Ai.GetAiContext;
+using Core.Application.UseCases.Ai.GetFinancialSummary;
 using Core.Application.UseCases.Auth.ForgotPassword;
 using Core.Application.UseCases.Auth.GetMe;
 using Core.Application.UseCases.Auth.Login;
@@ -10,6 +12,9 @@ using Core.Application.UseCases.Auth.Register;
 using Core.Application.UseCases.Auth.ResetPassword;
 using Core.Application.UseCases.Employees.CreateEmployee;
 using Core.Application.UseCases.Employees.GetEmployees;
+using Core.Application.UseCases.Imports.CreateImport;
+using Core.Application.UseCases.Imports.GetImport;
+using Core.Application.UseCases.Imports.GetImports;
 using Core.Application.UseCases.Meis.CreateMei;
 using Core.Application.UseCases.Meis.DeleteMei;
 using Core.Application.UseCases.Meis.GetMei;
@@ -167,6 +172,61 @@ builder.Services.AddScoped<DeleteProductHandler>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<GetEmployeesHandler>();
 builder.Services.AddScoped<CreateEmployeeHandler>();
+
+// Imports slice — repository, three handlers, and the two outbound
+// HTTP services (FastAPI classifier + Supabase Storage uploader).
+//
+// Settings POCOs are bound and re-registered as plain instances (same
+// pattern as JwtSettings / ResendSettings) so the implementations can
+// take a typed dependency without coupling to IOptions at the call
+// site — keeps Core.Infrastructure unit-testable with `new
+// FastApiSettings { ... }`.
+builder.Services.Configure<FastApiSettings>(builder.Configuration.GetSection("FastApi"));
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<FastApiSettings>>().Value);
+builder.Services.Configure<SupabaseStorageSettings>(builder.Configuration.GetSection("SupabaseStorage"));
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<SupabaseStorageSettings>>().Value);
+
+builder.Services.AddScoped<IImportRepository, ImportRepository>();
+
+// Typed HttpClients via IHttpClientFactory — pooled handlers, no
+// socket exhaustion, retries / Polly can be added later in one place.
+//
+// FastAPI gets a 5-minute timeout because LLM classification of a
+// large file can legitimately take a while; the default of 100 s
+// would surface as transient "transport error" Imports for normal
+// usage. 5 minutes still bounds the request so a hung worker
+// doesn't tie up a connection forever.
+builder.Services.AddHttpClient<IFastApiService, FastApiService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+
+// SupabaseStorage — registered as a NAMED HttpClient + manual factory.
+// The typed-client overload (AddHttpClient<IService, TImpl>) resolves
+// constructor parameters via ActivatorUtilities, but here we want
+// SupabaseStorageSettings (a plain singleton) to be looked up
+// explicitly so the wiring is obvious and a missing settings
+// registration fails with a loud, locatable error instead of a
+// confusing activation exception.
+builder.Services.AddHttpClient("SupabaseStorage");
+builder.Services.AddScoped<IStorageService>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient("SupabaseStorage");
+    var settings = sp.GetRequiredService<SupabaseStorageSettings>();
+    return new SupabaseStorageService(httpClient, settings);
+});
+
+builder.Services.AddScoped<CreateImportHandler>();
+builder.Services.AddScoped<GetImportsHandler>();
+builder.Services.AddScoped<GetImportHandler>();
+
+// AI Context — read-only aggregations on top of the existing
+// transaction / product / employee / MEI repositories. No new
+// repositories or settings needed; the handlers compose what is
+// already registered above.
+builder.Services.AddScoped<GetAiContextHandler>();
+builder.Services.AddScoped<GetFinancialSummaryHandler>();
 
 // Forgot/Reset password — repository, email service, and handlers.
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
