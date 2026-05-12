@@ -1,82 +1,125 @@
-// ─── Entidades do banco de dados ──────────────────────────────────────────────
+// ─── API Response Types (camelCase — ASP.NET Core serialization default) ──────
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  phone?: string;
-  created_at: string;
+/** POST /v1/auth/login → LoginResponse */
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string; // ISO 8601 UTC
 }
 
-export interface Mei {
+/** GET /v1/auth/me  |  GET /v1/users/me  |  PUT /v1/users/me */
+export interface UserProfile {
   id: string;
-  user_id: string;
+  name: string | null;
+  email: string;
+  createdAt: string;
+}
+
+/** GET /v1/meis  |  POST /v1/meis  |  GET /v1/meis/:id  |  PUT /v1/meis/:id */
+export interface MeiResult {
+  id: string;
+  name: string;
+  cnpj: string | null;
+  cnae: string | null;
+  annualLimit: number | null;
+  plan: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+/** GET /v1/meis/:id/transactions  |  POST  |  GET /:txId  |  PUT /:txId */
+export interface TransactionResult {
+  id: string;
+  meiId: string;
+  type: "income" | "expense";
+  category: string | null;
+  amount: number;
+  /** DateOnly — serialized as "YYYY-MM-DD" */
+  date: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+/** GET /v1/meis/:id/products  |  POST  |  GET /:prodId  |  PUT /:prodId */
+export interface ProductResult {
+  id: string;
+  meiId: string;
+  name: string;
+  cost: number | null;
+  price: number | null;
+  desiredMargin: number | null;
+  status: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  /** Calculated server-side: (Price - Cost) / Price * 100 */
+  margin: number;
+  isMarginBelowDesired: boolean;
+}
+
+/** GET /v1/meis/:id/employees  |  POST */
+export interface EmployeeResult {
+  id: string;
+  meiId: string;
+  name: string;
+  contractType: string | null;
+  salary: number | null;
+  charges: number | null;
+  createdAt: string;
+  updatedAt: string | null;
+  /** Calculated server-side: Salary + Charges */
+  totalCost: number;
+}
+
+// ─── Request body DTOs ────────────────────────────────────────────────────────
+
+export interface CreateMeiDto {
   name: string;
   cnpj?: string;
   cnae?: string;
-  annual_limit: number;
-  plan: "starter" | "pro";
-  created_at: string;
+  annualLimit?: number;
+  plan?: string;
 }
+
+export interface UpdateMeiDto {
+  name: string;
+  cnae?: string;
+  annualLimit?: number;
+  plan?: string;
+}
+
+export interface CreateTransactionDto {
+  type: string;
+  category?: string;
+  amount: number;
+  date: string; // "YYYY-MM-DD"
+  description?: string;
+}
+
+export interface UpdateTransactionDto extends CreateTransactionDto {}
+
+export interface CreateProductDto {
+  name: string;
+  cost: number;
+  price: number;
+  desiredMargin: number;
+  status: string;
+}
+
+export interface UpdateProductDto extends CreateProductDto {}
+
+export interface CreateEmployeeDto {
+  name: string;
+  contractType: string;
+  salary: number;
+  charges: number;
+}
+
+// ─── Legacy entity types (kept for backwards compatibility) ──────────────────
 
 export type TransactionType = "income" | "expense";
-
-export interface Transaction {
-  id: string;
-  mei_id: string;
-  import_id?: string;
-  type: TransactionType;
-  category: string;
-  amount: number;
-  description?: string;
-  date: string;
-  created_at: string;
-}
-
 export type ImportStatus = "pending" | "processing" | "completed" | "failed";
-
-export interface Import {
-  id: string;
-  mei_id: string;
-  file_url: string;
-  status: ImportStatus;
-  total_rows?: number;
-  processed_rows?: number;
-  errors?: Record<string, unknown>;
-  created_at: string;
-}
-
-export interface Product {
-  id: string;
-  mei_id: string;
-  name: string;
-  cost?: number;
-  price?: number;
-  desired_margin?: number;
-  status: string;
-  created_at: string;
-}
-
 export type ContractType = "CLT" | "PJ" | "Freelancer";
-
-export interface Employee {
-  id: string;
-  mei_id: string;
-  name: string;
-  contract_type?: ContractType;
-  salary?: number;
-  charges?: number;
-  created_at: string;
-}
-
-export interface AiRecommendation {
-  id: string;
-  mei_id: string;
-  type: string;
-  content: string;
-  metadata?: Record<string, unknown>;
-  created_at: string;
-}
 
 // ─── DTOs de resposta ──────────────────────────────────────────────────────────
 
@@ -168,6 +211,6 @@ export interface AuthTokens {
 }
 
 export interface AuthSession {
-  user: User;
+  user: UserProfile;
   tokens: AuthTokens;
 }
