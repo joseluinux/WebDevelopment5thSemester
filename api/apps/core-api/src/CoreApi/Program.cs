@@ -1,6 +1,8 @@
 using System.Text;
 using Core.Application.Auth;
 using Core.Application.Interfaces;
+using Core.Application.UseCases.Ai.GetAiContext;
+using Core.Application.UseCases.Ai.GetFinancialSummary;
 using Core.Application.UseCases.Auth.ForgotPassword;
 using Core.Application.UseCases.Auth.GetMe;
 using Core.Application.UseCases.Auth.Login;
@@ -190,6 +192,13 @@ builder.Services.AddHttpClient<IStorageService, SupabaseStorageService>();
 builder.Services.AddScoped<CreateImportHandler>();
 builder.Services.AddScoped<GetImportsHandler>();
 builder.Services.AddScoped<GetImportHandler>();
+
+// AI Context — read-only aggregations on top of the existing
+// transaction / product / employee / MEI repositories. No new
+// repositories or settings needed; the handlers compose what is
+// already registered above.
+builder.Services.AddScoped<GetAiContextHandler>();
+builder.Services.AddScoped<GetFinancialSummaryHandler>();
 
 // Forgot/Reset password — repository, email service, and handlers.
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
