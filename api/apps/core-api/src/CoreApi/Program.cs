@@ -187,7 +187,22 @@ builder.Services.AddHttpClient<IFastApiService, FastApiService>(client =>
 {
     client.Timeout = TimeSpan.FromMinutes(5);
 });
-builder.Services.AddHttpClient<IStorageService, SupabaseStorageService>();
+
+// SupabaseStorage — registered as a NAMED HttpClient + manual factory.
+// The typed-client overload (AddHttpClient<IService, TImpl>) resolves
+// constructor parameters via ActivatorUtilities, but here we want
+// SupabaseStorageSettings (a plain singleton) to be looked up
+// explicitly so the wiring is obvious and a missing settings
+// registration fails with a loud, locatable error instead of a
+// confusing activation exception.
+builder.Services.AddHttpClient("SupabaseStorage");
+builder.Services.AddScoped<IStorageService>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient("SupabaseStorage");
+    var settings = sp.GetRequiredService<SupabaseStorageSettings>();
+    return new SupabaseStorageService(httpClient, settings);
+});
 
 builder.Services.AddScoped<CreateImportHandler>();
 builder.Services.AddScoped<GetImportsHandler>();
