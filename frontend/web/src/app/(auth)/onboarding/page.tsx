@@ -1,4 +1,41 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCreateMei } from "@/hooks/useMeis";
+import { useMeiContext } from "@/contexts/MeiContext";
+import axios from "axios";
+
 export default function OnboardingPage() {
+  const router = useRouter();
+  const createMei = useCreateMei();
+  const { refetchMeis } = useMeiContext();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    const fd = new FormData(e.currentTarget);
+    const name = (fd.get("name") as string).trim();
+    const cnpj = (fd.get("cnpj") as string).trim() || undefined;
+    const cnae = (fd.get("cnae") as string).trim() || undefined;
+    try {
+      await createMei.mutateAsync({ name, cnpj, cnae, plan: "Starter" });
+      refetchMeis();
+      router.push("/dashboard");
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        setError("Já existe um MEI com este CNPJ.");
+      } else {
+        setError("Erro ao criar MEI. Tente novamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex w-full overflow-hidden">
       {/* Left Panel — Editorial Visual Anchor */}
@@ -75,11 +112,47 @@ export default function OnboardingPage() {
 
           {/* Form Card */}
           <div className="bg-surface-container p-8 rounded-2xl border border-white/3 shadow-2xl">
-            <form action="/dashboard" method="GET" className="space-y-6">
+            {error && (
+              <div className="mb-4 px-4 py-3 rounded-lg bg-error/10 border border-error/20 text-error text-sm">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* MEI Name */}
+              <div className="space-y-2">
+                <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
+                  Nome do MEI / Negócio *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Ex: João Silva Consultoria"
+                  required
+                  disabled={isLoading}
+                  className="w-full bg-surface-container-lowest border-none rounded-lg py-4 px-4 text-sm text-on-surface focus:ring-1 focus:ring-primary/30 transition-all font-body disabled:opacity-50"
+                />
+              </div>
+
+              {/* CNPJ */}
+              <div className="space-y-2">
+                <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
+                  CNPJ{" "}
+                  <span className="text-on-surface-variant/40">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  name="cnpj"
+                  placeholder="00.000.000/0001-00"
+                  disabled={isLoading}
+                  className="w-full bg-surface-container-lowest border-none rounded-lg py-4 px-4 text-sm text-on-surface focus:ring-1 focus:ring-primary/30 transition-all font-body disabled:opacity-50"
+                />
+              </div>
+
               {/* CNAE */}
               <div className="space-y-2">
                 <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
-                  Primary CNAE Activity
+                  CNAE{" "}
+                  <span className="text-on-surface-variant/40">(opcional)</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-sm">
@@ -88,58 +161,10 @@ export default function OnboardingPage() {
                   <input
                     type="text"
                     name="cnae"
-                    placeholder="e.g. 6201-5/00 Development of software"
-                    className="w-full bg-surface-container-lowest border-none rounded-lg py-4 pl-12 pr-4 text-sm text-on-surface focus:ring-1 focus:ring-primary/30 transition-all font-body"
+                    placeholder="ex: 6201-5/00 Desenvolvimento de software"
+                    disabled={isLoading}
+                    className="w-full bg-surface-container-lowest border-none rounded-lg py-4 pl-12 pr-4 text-sm text-on-surface focus:ring-1 focus:ring-primary/30 transition-all font-body disabled:opacity-50"
                   />
-                </div>
-              </div>
-
-              {/* Revenue Range */}
-              <div className="space-y-2">
-                <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
-                  Annual Projected Revenue
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col items-start p-4 bg-surface-container-lowest rounded-lg border border-transparent text-left">
-                    <span className="text-xs font-headline font-bold text-on-surface mb-1">
-                      Up to R$ 40k
-                    </span>
-                    <span className="text-[10px] text-on-surface-variant">
-                      Micro Scale
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-start p-4 bg-surface-container-lowest rounded-lg border border-primary/60 bg-primary/5 text-left">
-                    <span className="text-xs font-headline font-bold text-white mb-1">
-                      R$ 40k – R$ 81k
-                    </span>
-                    <span className="text-[10px] text-primary">
-                      Standard MEI
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Employee Count */}
-              <div className="space-y-2">
-                <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
-                  Employee Count
-                </label>
-                <div className="flex items-center space-x-4 p-4 bg-surface-container-lowest rounded-lg">
-                  <span className="material-symbols-outlined text-on-surface-variant">
-                    person_add
-                  </span>
-                  <input
-                    type="range"
-                    name="employees"
-                    min="0"
-                    max="1"
-                    step="1"
-                    defaultValue="1"
-                    className="flex-1 accent-primary"
-                  />
-                  <span className="font-headline font-bold text-white text-sm">
-                    01
-                  </span>
                 </div>
               </div>
 
@@ -147,18 +172,21 @@ export default function OnboardingPage() {
               <div className="pt-4 flex flex-col gap-4">
                 <button
                   type="submit"
-                  className="w-full py-4 prism-gradient text-[#002979] font-headline font-bold rounded-lg hover:shadow-[0_0_20px_rgba(106,140,242,0.3)] transition-all flex items-center justify-center gap-2"
+                  disabled={isLoading}
+                  className="w-full py-4 prism-gradient text-[#002979] font-headline font-bold rounded-lg hover:shadow-[0_0_20px_rgba(106,140,242,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  Continue Analysis
-                  <span className="material-symbols-outlined text-lg">
-                    arrow_forward
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="w-full py-4 text-on-surface-variant font-label text-xs uppercase tracking-widest hover:text-white transition-colors"
-                >
-                  Skip for now
+                  {isLoading ? (
+                    <span className="material-symbols-outlined animate-spin text-lg">
+                      progress_activity
+                    </span>
+                  ) : (
+                    <>
+                      Entrar no Dashboard
+                      <span className="material-symbols-outlined text-lg">
+                        arrow_forward
+                      </span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

@@ -1,6 +1,41 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import axios from "axios";
 
 export default function RegisterPage() {
+  const { register, login } = useAuth();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    const fd = new FormData(e.currentTarget);
+    const name = fd.get("name") as string;
+    const email = fd.get("email") as string;
+    const password = fd.get("password") as string;
+    try {
+      await register(name, email, password);
+      // Auto-login after successful registration
+      await login(email, password);
+      router.push("/onboarding");
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        setError("Este e-mail já está em uso.");
+      } else {
+        setError("Erro ao criar conta. Tente novamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="w-full max-w-110 relative">
       {/* Ambient Glows */}
@@ -31,7 +66,13 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <form action="/onboarding" method="GET" className="space-y-6">
+        {error && (
+          <div className="mb-4 px-4 py-3 rounded-lg bg-error/10 border border-error/20 text-error text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold uppercase tracking-widest text-on-surface-variant/80 ml-1">
@@ -46,7 +87,8 @@ export default function RegisterPage() {
                 name="name"
                 placeholder="João da Silva"
                 required
-                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
+                disabled={isLoading}
+                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none disabled:opacity-50"
               />
             </div>
           </div>
@@ -65,7 +107,8 @@ export default function RegisterPage() {
                 name="email"
                 placeholder="nome@exemplo.com"
                 required
-                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
+                disabled={isLoading}
+                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none disabled:opacity-50"
               />
             </div>
           </div>
@@ -85,7 +128,8 @@ export default function RegisterPage() {
                 placeholder="Mínimo 8 caracteres"
                 required
                 minLength={8}
-                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
+                disabled={isLoading}
+                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none disabled:opacity-50"
               />
             </div>
           </div>
@@ -93,12 +137,21 @@ export default function RegisterPage() {
           {/* Submit */}
           <button
             type="submit"
-            className="w-full prism-gradient text-[#002979] font-headline font-bold py-4 rounded-lg shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            disabled={isLoading}
+            className="w-full prism-gradient text-[#002979] font-headline font-bold py-4 rounded-lg shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <span>Criar Conta</span>
-            <span className="material-symbols-outlined text-lg">
-              arrow_forward
-            </span>
+            {isLoading ? (
+              <span className="material-symbols-outlined animate-spin text-lg">
+                progress_activity
+              </span>
+            ) : (
+              <>
+                <span>Criar Conta</span>
+                <span className="material-symbols-outlined text-lg">
+                  arrow_forward
+                </span>
+              </>
+            )}
           </button>
         </form>
       </div>

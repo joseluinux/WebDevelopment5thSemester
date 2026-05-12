@@ -1,6 +1,40 @@
-import Link from "next/link";
+"use client";
 
-export default function LoginPage() {
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import axios from "axios";
+
+function LoginForm() {
+  const { login } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    const fd = new FormData(e.currentTarget);
+    const email = fd.get("email") as string;
+    const password = fd.get("password") as string;
+    try {
+      await login(email, password);
+      const from = searchParams.get("from") ?? "/dashboard";
+      router.push(from);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setError("E-mail ou senha incorretos.");
+      } else {
+        setError("Erro ao conectar. Tente novamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="w-full max-w-110 relative">
       {/* Ambient Glows */}
@@ -31,7 +65,13 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form action="/dashboard" method="GET" className="space-y-6">
+        {error && (
+          <div className="mb-4 px-4 py-3 rounded-lg bg-error/10 border border-error/20 text-error text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Email */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold uppercase tracking-widest text-on-surface-variant/80 ml-1">
@@ -46,7 +86,8 @@ export default function LoginPage() {
                 name="email"
                 placeholder="nome@exemplo.com"
                 required
-                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
+                disabled={isLoading}
+                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none disabled:opacity-50"
               />
             </div>
           </div>
@@ -73,7 +114,8 @@ export default function LoginPage() {
                 name="password"
                 placeholder="••••••••"
                 required
-                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none"
+                disabled={isLoading}
+                className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary transition-all outline-none disabled:opacity-50"
               />
             </div>
           </div>
@@ -81,12 +123,21 @@ export default function LoginPage() {
           {/* Submit */}
           <button
             type="submit"
-            className="w-full prism-gradient text-[#002979] font-headline font-bold py-4 rounded-lg shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            disabled={isLoading}
+            className="w-full prism-gradient text-[#002979] font-headline font-bold py-4 rounded-lg shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <span>Entrar</span>
-            <span className="material-symbols-outlined text-lg">
-              arrow_forward
-            </span>
+            {isLoading ? (
+              <span className="material-symbols-outlined animate-spin text-lg">
+                progress_activity
+              </span>
+            ) : (
+              <>
+                <span>Entrar</span>
+                <span className="material-symbols-outlined text-lg">
+                  arrow_forward
+                </span>
+              </>
+            )}
           </button>
         </form>
       </div>
@@ -126,5 +177,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

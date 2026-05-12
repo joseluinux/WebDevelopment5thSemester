@@ -1,237 +1,262 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = { title: "Employees — LUMEMEI" };
+import { formatCurrency } from "@/utils/formatters";
+import { useMeiContext } from "@/contexts/MeiContext";
+import Portal from "@/components/Portal";
+import { useEmployees, useCreateEmployee } from "@/hooks/useEmployees";
+import { useState } from "react";
+import type { CreateEmployeeDto } from "@/types";
 
-const EMPLOYEES = [
-  {
-    id: "1",
-    name: "Marcus Silva",
-    role: "Sr. Frontend Engineer",
-    dept: "Engineering",
-    type: "CLT",
-    salary: 15000,
-    totalCost: 25500,
-    initials: "MS",
-  },
-  {
-    id: "2",
-    name: "Elena Costa",
-    role: "Product Manager",
-    dept: "Product",
-    type: "PJ",
-    salary: 18000,
-    totalCost: 18000,
-    initials: "EC",
-  },
-  {
-    id: "3",
-    name: "Jordan Lee",
-    role: "Data Analyst",
-    dept: "Analytics",
-    type: "CLT",
-    salary: 12000,
-    totalCost: 20400,
-    initials: "JL",
-  },
-  {
-    id: "4",
-    name: "Sofia Melo",
-    role: "UX Designer",
-    dept: "Design",
-    type: "PJ",
-    salary: 14000,
-    totalCost: 14000,
-    initials: "SM",
-  },
-];
+const EMPTY_FORM: CreateEmployeeDto = {
+  name: "",
+  contractType: "",
+  salary: 0,
+  charges: 0,
+};
 
 export default function EmployeesPage() {
+  const { activeMei } = useMeiContext();
+  const meiId = activeMei?.id ?? "";
+  const { data: employees = [], isLoading } = useEmployees(meiId);
+  const createEmployee = useCreateEmployee(meiId);
+
+  const [showNew, setShowNew] = useState(false);
+  const [form, setForm] = useState<CreateEmployeeDto>(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+
+  const totalPayroll = employees.reduce((sum, e) => sum + (e.salary ?? 0), 0);
+  const activeCount = employees.length;
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await createEmployee.mutateAsync(form);
+      setShowNew(false);
+      setForm(EMPTY_FORM);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {/* Header */}
-      <div>
-        <h2 className="font-headline text-on-surface text-2xl tracking-tight">
-          Employee Directory
-        </h2>
-        <p className="text-on-surface-variant text-sm mt-1">
-          Manage payroll and team structure.
-        </p>
-      </div>
-
-      {/* Bento — Payroll Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Payroll */}
-        <div className="md:col-span-2 bg-surface-container rounded-xl p-6 relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-container/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-          <div className="flex justify-between items-start mb-12 relative z-10">
-            <div>
-              <p className="font-label text-on-surface-variant text-sm tracking-wider uppercase">
-                Total Monthly Payroll
-              </p>
-              <h3 className="font-display text-5xl md:text-6xl text-white tracking-tighter mt-2">
-                R$ 482.500
-              </h3>
-            </div>
-            <div className="bg-surface-container-highest p-2 rounded-lg border border-outline-variant/20">
-              <span className="material-symbols-outlined text-primary-container">
-                account_balance
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4 relative z-10">
-            <div className="bg-surface-container-lowest p-4 rounded-lg">
-              <p className="text-on-surface-variant text-xs mb-1">
-                CLT Charges (INSS/FGTS)
-              </p>
-              <p className="font-headline text-lg text-on-surface">
-                R$ 145.200
-              </p>
-            </div>
-            <div className="bg-surface-container-lowest p-4 rounded-lg">
-              <p className="text-on-surface-variant text-xs mb-1">
-                PJ Contracts Total
-              </p>
-              <p className="font-headline text-lg text-on-surface">
-                R$ 120.000
-              </p>
-            </div>
-          </div>
+      <header className="flex justify-between items-end">
+        <div>
+          <h1 className="font-display text-5xl text-on-surface mb-3 tracking-tighter font-medium">
+            Employees
+          </h1>
+          <p className="text-on-surface-variant font-body text-sm max-w-md">
+            Gerencie a equipe do {activeMei?.name ?? "—"}
+          </p>
         </div>
-
-        {/* Headcount */}
-        <div className="bg-surface-container rounded-xl p-6 flex flex-col gap-6">
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <p className="font-label text-on-surface-variant text-sm tracking-wider uppercase">
-                Headcount
-              </p>
-              <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded">
-                +3 this month
-              </span>
-            </div>
-            <p className="font-display text-4xl text-white tracking-tighter">
-              42
-            </p>
-          </div>
-          <div className="flex-1 flex flex-col justify-end">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary-container" />
-                  CLT
-                </span>
-                <span className="font-headline text-on-surface">28</span>
-              </div>
-              <div className="w-full bg-surface-container-lowest h-1.5 rounded-full overflow-hidden">
-                <div className="bg-primary-container h-full w-[66%]" />
-              </div>
-              <div className="flex justify-between items-center text-sm pt-2">
-                <span className="text-on-surface-variant flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-tertiary" />
-                  PJ
-                </span>
-                <span className="font-headline text-on-surface">14</span>
-              </div>
-              <div className="w-full bg-surface-container-lowest h-1.5 rounded-full overflow-hidden">
-                <div className="bg-tertiary h-full w-[34%]" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4">
-        <div className="flex gap-2">
-          <button className="bg-surface-container-highest text-on-surface px-4 py-2 rounded-lg text-sm font-medium border border-outline-variant/20 hover:bg-surface-bright transition-colors flex items-center gap-2">
-            <span className="material-symbols-outlined text-lg">
-              filter_list
-            </span>
-            All Contracts
-          </button>
-          <button className="bg-surface-container-highest text-on-surface px-4 py-2 rounded-lg text-sm font-medium border border-outline-variant/20 hover:bg-surface-bright transition-colors flex items-center gap-2">
-            <span className="material-symbols-outlined text-lg">sort</span>
-            Sort by Dept
-          </button>
-        </div>
-        <button className="prism-gradient text-[#002979] font-label text-sm py-2 px-5 rounded-lg flex items-center gap-2 hover:brightness-110 transition-all">
+        <button
+          onClick={() => setShowNew(true)}
+          className="prism-gradient text-[#002979] font-label font-bold text-sm px-5 py-2.5 rounded-lg flex items-center gap-2 hover:brightness-110 active:scale-95 active:brightness-90 transition-all cursor-pointer"
+        >
           <span className="material-symbols-outlined text-lg">person_add</span>
-          Add Employee
+          Novo Funcionário
         </button>
-      </div>
+      </header>
+
+      {/* Create Modal */}
+      {showNew && (
+        <Portal>
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-[#2b292c] border border-white/10 rounded-2xl p-8 w-full max-w-md shadow-2xl">
+              <h2 className="font-headline text-xl font-bold text-on-surface mb-6">
+                Novo Funcionário
+              </h2>
+              <form onSubmit={handleCreate} className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-label text-on-surface-variant uppercase tracking-wide">
+                    Nome completo <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: João Silva"
+                    required
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, name: e.target.value }))
+                    }
+                    className="w-full bg-[#1c1b1d] border border-white/10 rounded-lg py-3 px-4 text-sm text-on-surface focus:ring-1 focus:ring-primary outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-label text-on-surface-variant uppercase tracking-wide">
+                    Tipo de contrato
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: CLT, MEI, PJ, Freelancer"
+                    value={form.contractType ?? ""}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, contractType: e.target.value }))
+                    }
+                    className="w-full bg-[#1c1b1d] border border-white/10 rounded-lg py-3 px-4 text-sm text-on-surface focus:ring-1 focus:ring-primary outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-label text-on-surface-variant uppercase tracking-wide">
+                      Salário (R$)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="0,00"
+                      min={0}
+                      step={0.01}
+                      value={form.salary ?? ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          salary: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-full bg-[#1c1b1d] border border-white/10 rounded-lg py-3 px-4 text-sm text-on-surface focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-label text-on-surface-variant uppercase tracking-wide">
+                      Encargos (R$)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="0,00"
+                      min={0}
+                      step={0.01}
+                      value={form.charges ?? ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          charges: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-full bg-[#1c1b1d] border border-white/10 rounded-lg py-3 px-4 text-sm text-on-surface focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(false)}
+                    className="flex-1 py-3 border border-white/10 rounded-lg text-on-surface-variant text-sm hover:bg-white/5 active:scale-95 active:bg-white/10 transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex-1 py-3 prism-gradient text-[#002979] font-bold text-sm rounded-lg disabled:opacity-60 hover:brightness-110 active:scale-95 active:brightness-90 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {saving ? (
+                      <span className="material-symbols-outlined animate-spin text-base">
+                        progress_activity
+                      </span>
+                    ) : (
+                      "Salvar"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Payroll Summary */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-surface-container rounded-lg p-6">
+          <p className="font-label text-sm text-on-surface-variant uppercase tracking-widest mb-4">
+            Folha Total
+          </p>
+          <h2 className="font-display text-4xl text-on-surface tracking-tight">
+            {formatCurrency(totalPayroll)}
+          </h2>
+          <p className="mt-2 text-xs text-on-surface-variant">por mês</p>
+        </div>
+        <div className="bg-surface-container rounded-lg p-6">
+          <p className="font-label text-sm text-on-surface-variant uppercase tracking-widest mb-4">
+            Funcionários Ativos
+          </p>
+          <h2 className="font-display text-4xl text-primary-container tracking-tight">
+            {activeCount}
+          </h2>
+          <p className="mt-2 text-xs text-on-surface-variant">
+            de {employees.length} total
+          </p>
+        </div>
+        <div className="bg-surface-container rounded-lg p-6">
+          <p className="font-label text-sm text-on-surface-variant uppercase tracking-widest mb-4">
+            Média Salarial
+          </p>
+          <h2 className="font-display text-4xl text-on-surface tracking-tight">
+            {employees.length > 0
+              ? formatCurrency(totalPayroll / employees.length)
+              : "—"}
+          </h2>
+        </div>
+      </section>
 
       {/* Employee List */}
-      <div className="space-y-4">
-        {/* Headers */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2">
-          <div className="col-span-4">Employee</div>
-          <div className="col-span-2">Role / Dept</div>
-          <div className="col-span-2">Type</div>
-          <div className="col-span-2 text-right">Base Salary</div>
-          <div className="col-span-2 text-right">Total Cost</div>
-        </div>
-
-        {EMPLOYEES.map((emp) => (
-          <div
-            key={emp.id}
-            className="bg-surface-container rounded-xl p-4 md:px-6 md:py-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center hover:bg-surface-container-high transition-colors cursor-pointer group"
-          >
-            {/* Employee */}
-            <div className="col-span-1 md:col-span-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center font-headline font-bold text-sm text-on-surface-variant">
-                {emp.initials}
-              </div>
-              <div>
-                <p className="font-headline text-on-surface font-medium group-hover:text-primary-container transition-colors">
-                  {emp.name}
-                </p>
-                <p className="text-xs text-on-surface-variant md:hidden">
-                  {emp.role} • {emp.type}
-                </p>
-              </div>
-            </div>
-
-            {/* Role / Dept */}
-            <div className="hidden md:block col-span-2">
-              <p className="text-sm text-on-surface">{emp.role}</p>
-              <p className="text-xs text-on-surface-variant">{emp.dept}</p>
-            </div>
-
-            {/* Type */}
-            <div className="hidden md:block col-span-2">
-              <span
-                className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                  emp.type === "CLT"
-                    ? "bg-primary/10 text-primary"
-                    : "bg-tertiary/10 text-tertiary"
-                }`}
-              >
-                {emp.type}
-              </span>
-            </div>
-
-            {/* Base Salary */}
-            <div className="col-span-1 md:col-span-2 md:text-right flex justify-between md:block">
-              <span className="text-xs text-on-surface-variant md:hidden">
-                Base:
-              </span>
-              <p className="text-sm font-headline text-on-surface">
-                R$ {emp.salary.toLocaleString("pt-BR")}
-              </p>
-            </div>
-
-            {/* Total Cost */}
-            <div className="col-span-1 md:col-span-2 md:text-right flex justify-between md:block">
-              <span className="text-xs text-on-surface-variant md:hidden">
-                Total Cost:
-              </span>
-              <p className="text-sm font-headline text-primary-container font-bold">
-                R$ {emp.totalCost.toLocaleString("pt-BR")}
-              </p>
-            </div>
+      <section>
+        <h2 className="font-headline text-lg text-on-surface tracking-tight mb-6 px-2">
+          Equipe
+        </h2>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-48">
+            <span className="material-symbols-outlined animate-spin text-primary text-4xl">
+              progress_activity
+            </span>
           </div>
-        ))}
-      </div>
+        ) : employees.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 text-on-surface-variant gap-3">
+            <span className="material-symbols-outlined text-4xl">group</span>
+            <p className="font-body text-sm">Nenhum funcionário cadastrado.</p>
+            <button
+              onClick={() => setShowNew(true)}
+              className="text-primary text-xs underline cursor-pointer"
+            >
+              Adicionar funcionário
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {employees.map((emp) => (
+              <div
+                key={emp.id}
+                className="bg-surface-container rounded-xl p-5 flex items-center gap-5 hover:bg-surface-container-high transition-colors"
+              >
+                <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center flex-shrink-0 text-on-surface-variant">
+                  <span className="material-symbols-outlined text-base">
+                    person
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-headline text-base text-on-surface truncate">
+                    {emp.name}
+                  </h3>
+                  <p className="text-sm text-on-surface-variant truncate">
+                    {emp.contractType ?? "Sem contrato"}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-display text-base text-on-surface">
+                    {formatCurrency(emp.salary ?? 0)}
+                  </p>
+                  {emp.charges != null && emp.charges > 0 && (
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      Encargos: {formatCurrency(emp.charges)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

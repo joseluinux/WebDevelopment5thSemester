@@ -1,4 +1,4 @@
-import { StatCardSkeleton, TableRowSkeleton } from "@/app/components/ui";
+import { StatCardSkeleton } from "@/app/components/ui";
 
 export default function DashboardLoading() {
   return (
@@ -22,10 +22,20 @@ export default function DashboardLoading() {
         <div className="lg:col-span-2 h-72 bg-surface-container rounded-xl" />
       </div>
 
-      {/* Table rows */}
-      <div className="space-y-2">
+      {/* Recent transactions skeleton */}
+      <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <TableRowSkeleton key={i} />
+          <div
+            key={i}
+            className="bg-surface-container rounded-xl px-6 py-4 flex items-center gap-4"
+          >
+            <div className="w-10 h-10 rounded-full bg-surface-container-high flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-1/3 bg-surface-container-high rounded" />
+              <div className="h-3 w-1/5 bg-surface-container-high rounded" />
+            </div>
+            <div className="h-5 w-20 bg-surface-container-high rounded" />
+          </div>
         ))}
       </div>
     </div>

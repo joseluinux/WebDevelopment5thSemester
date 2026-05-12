@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
+import Providers from "./providers";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -58,7 +59,7 @@ export default function RootLayout({
         {/* Fixed ambient glows — aparecem em todas as páginas */}
         <div className="page-glow-tr" aria-hidden="true" />
         <div className="page-glow-bl" aria-hidden="true" />
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
