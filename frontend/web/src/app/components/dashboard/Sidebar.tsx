@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useMeiContext } from "@/contexts/MeiContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
@@ -20,11 +22,19 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { meis, activeMei, setActiveMei } = useMeiContext();
+  const { logout } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   };
+
+  async function handleLogout() {
+    await logout();
+    router.push("/login");
+  }
 
   return (
     <nav className="bg-[#141315] hidden md:flex flex-col h-full py-8 w-64 fixed left-0 top-0 z-50">
@@ -40,6 +50,33 @@ export function Sidebar() {
           Fintech Obsidian
         </span>
       </div>
+
+      {/* MEI Switcher */}
+      {meis.length > 0 && (
+        <div className="px-4 mb-6">
+          <p className="text-[10px] uppercase tracking-widest text-on-surface-variant mb-2 px-2">
+            MEI Ativo
+          </p>
+          <select
+            value={activeMei?.id ?? ""}
+            onChange={(e) => setActiveMei(e.target.value)}
+            className="w-full bg-surface-container-lowest text-on-surface text-xs rounded-lg px-3 py-2 border border-outline-variant/20 focus:outline-none focus:ring-1 focus:ring-primary/40"
+          >
+            {meis.map((mei) => (
+              <option key={mei.id} value={mei.id}>
+                {mei.name}
+              </option>
+            ))}
+          </select>
+          <Link
+            href="/onboarding"
+            className="flex items-center gap-1 mt-2 px-2 text-[10px] text-on-surface-variant hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            Novo MEI
+          </Link>
+        </div>
+      )}
 
       {/* CTA */}
       <div className="px-6 mb-8">
@@ -84,17 +121,17 @@ export function Sidebar() {
         ))}
       </div>
 
-      {/* Footer — apenas Sign Out colado no fundo */}
+      {/* Footer */}
       <div className="mt-auto w-full">
-        <Link
-          href="/login"
-          className="text-[#C4C6D5] py-3 px-6 flex items-center gap-3 hover:bg-[#201F21] font-label uppercase tracking-widest text-[10px] hover:text-white transition-all duration-300 group"
+        <button
+          onClick={handleLogout}
+          className="w-full text-left text-[#C4C6D5] py-3 px-6 flex items-center gap-3 hover:bg-[#201F21] font-label uppercase tracking-widest text-[10px] hover:text-white transition-all duration-300 group"
         >
           <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
             logout
           </span>
           <span>Sign Out</span>
-        </Link>
+        </button>
       </div>
     </nav>
   );
