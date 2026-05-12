@@ -7,8 +7,12 @@ Core.Application/
 ├── Auth/
 │   ├── JwtSettings.cs          ← strongly-typed POCO for JWT configuration
 │   └── TokenFactory.cs         ← internal helper: JWT signing + CSPRNG refresh-token generation
+├── DTOs/
+│   └── ImportResponse.cs       ← strongly-typed mirror of the FastAPI /api/import/process response
 ├── Interfaces/
-│   └── IEmailService.cs        ← abstraction for transactional email (implemented by Core.Infrastructure)
+│   ├── IEmailService.cs        ← abstraction for transactional email
+│   ├── IFastApiService.cs      ← abstraction for the FastAPI classification service
+│   └── IStorageService.cs      ← abstraction for object storage (upload-and-get-URL)
 └── UseCases/
     ├── Auth/
     │   ├── Register/
@@ -97,14 +101,26 @@ Core.Application/
     │   └── DeleteProduct/
     │       ├── DeleteProductCommand.cs
     │       └── DeleteProductHandler.cs
-    └── Employees/
-        ├── GetEmployees/
-        │   ├── GetEmployeesQuery.cs
-        │   ├── GetEmployeesHandler.cs
-        │   └── GetEmployeesResult.cs   ← includes computed TotalCost field
-        └── CreateEmployee/
-            ├── CreateEmployeeCommand.cs
-            └── CreateEmployeeHandler.cs
+    ├── Employees/
+    │   ├── GetEmployees/
+    │   │   ├── GetEmployeesQuery.cs
+    │   │   ├── GetEmployeesHandler.cs
+    │   │   └── GetEmployeesResult.cs   ← includes computed TotalCost field
+    │   └── CreateEmployee/
+    │       ├── CreateEmployeeCommand.cs
+    │       └── CreateEmployeeHandler.cs
+    └── Imports/
+        ├── ImportResult.cs             ← shared wire DTO (Errors deserialized from jsonb)
+        ├── ImportResultMapper.cs       ← internal mapper with jsonb-tolerant Errors parsing
+        ├── GetImports/
+        │   ├── GetImportsQuery.cs
+        │   └── GetImportsHandler.cs
+        ├── GetImport/
+        │   ├── GetImportQuery.cs
+        │   └── GetImportHandler.cs
+        └── CreateImport/
+            ├── CreateImportCommand.cs
+            └── CreateImportHandler.cs  ← 7-step upload-and-process orchestration
 ```
 
 ---
@@ -694,7 +710,74 @@ Creates a new employee in the caller's MEI. `ContractType`, `Salary`, and `Charg
 
 ---
 
-## `Interfaces/IEmailService`
+---
+
+## Import Use Cases
+
+Imports are nested under their parent MEI. The initial slice ships List, Get, and Create (upload + process). No Delete — imports are append-only for audit purposes; users can see every job that ran and its errors.
+
+### `ImportResult` + `ImportResultMapper`
+
+```
+ImportResult(Guid Id, Guid MeiId, string FileUri, string Status,
+             int? TotalRows, int? ProcessedRows, IReadOnlyList<string>? Errors,
+             DateTime CreatedAt, DateTime? UpdatedAt)
+```
+
+The `Errors` column is `jsonb` in PostgreSQL (stored as a JSON-encoded array of strings). `ImportResultMapper.ToResult` deserialises it back to `IReadOnlyList<string>?` for the wire. Parse failures are downgraded to a single-element list containing the raw text — the mapper never throws, so a hand-written or legacy row can't break a read.
+
+---
+
+### `Imports/GetImports`
+
+Lists all import rows in a MEI.
+
+**Input:** `GetImportsQuery(Guid MeiId, Guid UserId)`
+**Output:** `IReadOnlyList<ImportResult>` (newest first)
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403.
+
+---
+
+### `Imports/GetImport`
+
+Fetches one import with the two-level ownership check plus cross-MEI guard.
+
+**Input:** `GetImportQuery(Guid MeiId, Guid UserId, Guid ImportId)`
+**Output:** `ImportResult`
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403, `ImportNotFoundException` → 404 (covers "doesn't exist" and "exists under a different MEI").
+
+---
+
+### `Imports/CreateImport`
+
+Orchestrates the full upload-and-classify flow synchronously. Returns the final `ImportResult` to the caller regardless of whether FastAPI succeeded or failed.
+
+**7-step flow:**
+
+1. **MEI ownership** — reject before any I/O (403 before burning an LLM call).
+2. **Upload to Supabase Storage** — key is `{meiId}/{guid}-{fileName}` (collision-proof, no cross-tenant URL guessing).
+3. **Persist Import row as `"processing"`** — committed to DB before the FastAPI call so the row survives any downstream failure.
+4. **Call FastAPI** — transport errors are caught; the row transitions to `"error"` and the exception message is stored in `Errors`. The import is never left stuck in `"processing"`.
+5. **Persist classified rows** — transactions (with `ImportId` FK), products, and employees from the FastAPI response are written via their existing repositories.
+6. **Update Import row** — final status (`"completed"` / `"partial"` / `"error"`), `TotalRows`, `ProcessedRows`, and `Errors` (JSON-serialised array) are persisted.
+7. **Return** — `ImportResultMapper.ToResult` produces the final wire DTO.
+
+**Status mapping** (FastAPI → Import.Status): `"success"` → `"completed"`, `"partial"` → `"partial"`, `"error"` / unknown → `"error"`.
+
+**Input:** `CreateImportCommand(Guid MeiId, Guid UserId, string FileName, Stream FileStream, string ContentType)`
+**Output:** `ImportResult`
+
+**Dependencies:** `IMeiRepository`, `IImportRepository`, `IStorageService`, `IFastApiService`, `ITransactionRepository`, `IProductRepository`, `IEmployeeRepository`.
+
+**Exceptions thrown:** `MeiNotFoundException` → 404, `UnauthorizedAccessException` → 403. Transport failures from FastAPI/Storage surface as `ImportResult.Status = "error"`, not as HTTP errors.
+
+---
+
+## `Interfaces/`
+
+### `IEmailService`
 
 Abstraction for transactional email. `Core.Application` handlers depend on this interface; `Core.Infrastructure` supplies the concrete `ResendEmailService` implementation.
 
@@ -705,6 +788,37 @@ Methods are named after their *intent*, not the transport, so implementations ow
 | `SendPasswordResetEmailAsync(string toEmail, string resetLink, ...)` | Sends the password-reset email with the one-time link |
 
 Why an interface rather than a direct Resend dependency: handlers remain unit-testable (Moq can replace the email service), the provider can be swapped (Mailgun, SES, SMTP) by writing a new implementation, and `Core.Application` stays free of third-party SDK types.
+
+### `IFastApiService`
+
+Abstraction for the FastAPI LLM classification service.
+
+| Method | Description |
+|---|---|
+| `ProcessImportAsync(string importId, string meiId, string fileUrl, ...)` | Sends a job to FastAPI and returns the parsed `ImportResponse` |
+
+Parameters use `string` for ids because the call crosses a process boundary; Guid parsing is the caller's responsibility. Throws on transport failure or non-2xx — `CreateImportHandler` catches and records the error in the Import row.
+
+### `IStorageService`
+
+Abstraction for object storage (upload-and-get-public-URL).
+
+| Method | Description |
+|---|---|
+| `UploadFileAsync(string bucketName, string fileName, Stream fileStream, string contentType, ...)` | Uploads one file and returns a URL any HTTP client can download |
+
+Intentionally narrow — one method, no list/delete/signed-URL helpers. The surface grows when a use case actually needs it.
+
+### `DTOs/ImportResponse`
+
+Strongly-typed mirror of the FastAPI `/api/import/process` JSON response. All field names carry `[JsonPropertyName("snake_case")]` attributes so the rest of the C# codebase stays in PascalCase regardless of FastAPI naming conventions.
+
+| Sub-DTO | Purpose |
+|---|---|
+| `ImportResponse` | Top-level payload: ids, counts, status, errors, child rows |
+| `ImportTransactionDto` | One classified transaction row; `Date` is kept as `string` (parsed to `DateOnly` in the handler) |
+| `ImportProductDto` | One classified product row; `Cost`/`Price`/`DesiredMargin` are nullable |
+| `ImportEmployeeDto` | One classified employee row; `ContractType`/`Salary`/`Charges` are nullable |
 
 ---
 

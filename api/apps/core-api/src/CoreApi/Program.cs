@@ -10,6 +10,9 @@ using Core.Application.UseCases.Auth.Register;
 using Core.Application.UseCases.Auth.ResetPassword;
 using Core.Application.UseCases.Employees.CreateEmployee;
 using Core.Application.UseCases.Employees.GetEmployees;
+using Core.Application.UseCases.Imports.CreateImport;
+using Core.Application.UseCases.Imports.GetImport;
+using Core.Application.UseCases.Imports.GetImports;
 using Core.Application.UseCases.Meis.CreateMei;
 using Core.Application.UseCases.Meis.DeleteMei;
 using Core.Application.UseCases.Meis.GetMei;
@@ -154,6 +157,39 @@ builder.Services.AddScoped<DeleteProductHandler>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<GetEmployeesHandler>();
 builder.Services.AddScoped<CreateEmployeeHandler>();
+
+// Imports slice — repository, three handlers, and the two outbound
+// HTTP services (FastAPI classifier + Supabase Storage uploader).
+//
+// Settings POCOs are bound and re-registered as plain instances (same
+// pattern as JwtSettings / ResendSettings) so the implementations can
+// take a typed dependency without coupling to IOptions at the call
+// site — keeps Core.Infrastructure unit-testable with `new
+// FastApiSettings { ... }`.
+builder.Services.Configure<FastApiSettings>(builder.Configuration.GetSection("FastApi"));
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<FastApiSettings>>().Value);
+builder.Services.Configure<SupabaseStorageSettings>(builder.Configuration.GetSection("SupabaseStorage"));
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<SupabaseStorageSettings>>().Value);
+
+builder.Services.AddScoped<IImportRepository, ImportRepository>();
+
+// Typed HttpClients via IHttpClientFactory — pooled handlers, no
+// socket exhaustion, retries / Polly can be added later in one place.
+//
+// FastAPI gets a 5-minute timeout because LLM classification of a
+// large file can legitimately take a while; the default of 100 s
+// would surface as transient "transport error" Imports for normal
+// usage. 5 minutes still bounds the request so a hung worker
+// doesn't tie up a connection forever.
+builder.Services.AddHttpClient<IFastApiService, FastApiService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+builder.Services.AddHttpClient<IStorageService, SupabaseStorageService>();
+
+builder.Services.AddScoped<CreateImportHandler>();
+builder.Services.AddScoped<GetImportsHandler>();
+builder.Services.AddScoped<GetImportHandler>();
 
 // Forgot/Reset password — repository, email service, and handlers.
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
