@@ -36,6 +36,38 @@ async def process_import(request: ImportRequest) -> ImportResponse:
         ) from exc
 
 
+@router.post(
+    "/upload",
+    response_model=ImportResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Upload direto de planilha (frontend → FastAPI)",
+    description=(
+        "Recebe o arquivo CSV ou XLSX diretamente do frontend, sem passar pelo backend C#. "
+        "Executa o agente de classificação e retorna o JSON estruturado para o frontend exibir "
+        "o preview. O frontend então envia a confirmação para o C# para persistência no banco."
+    ),
+)
+async def upload_import(
+    file: UploadFile = File(..., description="Arquivo CSV ou XLSX"),
+    mei_id: str = Form(..., description="ID do MEI para contexto"),
+) -> ImportResponse:
+    raw_bytes = await file.read()
+    filename = file.filename or "planilha.csv"
+    import_id = str(uuid.uuid4())
+
+    try:
+        return await import_service.process_raw_bytes(
+            raw_bytes=raw_bytes,
+            filename=filename,
+            import_id=import_id,
+            mei_id=mei_id,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao processar arquivo: {exc}",
+        ) from exc
+
 
 @router.post(
     "/dev/upload",

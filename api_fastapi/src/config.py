@@ -48,6 +48,16 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE_MB: int = 50
+
+    # ── CORS ──────────────────────────────────────────────────────────────────
+    # Lista de origens permitidas para chamadas diretas do browser.
+    # Em dev: localhost. Em prod: domínio real do frontend.
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://lumemei.com.br",
+        "https://www.lumemei.com.br",
+    ]
     ALLOWED_EXTENSIONS: str = "csv,xlsx,xls,json"  # String separada por vírgula
 
 

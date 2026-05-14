@@ -7,11 +7,13 @@ src/Api_agent.egg-info/entry_points.txt
 src/Api_agent.egg-info/requires.txt
 src/Api_agent.egg-info/top_level.txt
 src/agents/__init__.py
+src/agents/chat_agent.py
 src/agents/import_agent.py
 src/agents/import_prompts.py
 src/agents/import_state.py
 src/agents/import_tools.py
 src/api/__init__.py
+src/api/chat_routes.py
 src/api/routes.py
 src/domain/__init__.py
 src/domain/llm_factory.py
@@ -23,6 +25,7 @@ src/graphs/import_graphs.py
 src/rag/__init__.py
 src/schemas/schemas.py
 src/services/__init__.py
+src/services/chat_service.py
 src/services/import_service.py
 src/shared/__init__.py
 src/shared/exceptions.py
