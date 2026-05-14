@@ -1,9 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Core.Application.UseCases.Imports;
+using Core.Application.UseCases.Imports.ConfirmImport;
 using Core.Application.UseCases.Imports.CreateImport;
 using Core.Application.UseCases.Imports.GetImport;
 using Core.Application.UseCases.Imports.GetImports;
+using Core.Application.UseCases.Imports.PreviewImport;
 using Core.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,15 +35,21 @@ public class ImportsController : ControllerBase
     };
 
     private readonly CreateImportHandler _createImportHandler;
+    private readonly PreviewImportHandler _previewImportHandler;
+    private readonly ConfirmImportHandler _confirmImportHandler;
     private readonly GetImportsHandler _getImportsHandler;
     private readonly GetImportHandler _getImportHandler;
 
     public ImportsController(
         CreateImportHandler createImportHandler,
+        PreviewImportHandler previewImportHandler,
+        ConfirmImportHandler confirmImportHandler,
         GetImportsHandler getImportsHandler,
         GetImportHandler getImportHandler)
     {
         _createImportHandler = createImportHandler;
+        _previewImportHandler = previewImportHandler;
+        _confirmImportHandler = confirmImportHandler;
         _getImportsHandler = getImportsHandler;
         _getImportHandler = getImportHandler;
     }
@@ -174,6 +182,98 @@ public class ImportsController : ControllerBase
         catch (ImportNotFoundException ex)
         {
             return NotFound(new { error = ex.Message });
+        }
+    }
+
+    // POST /v1/meis/{meiId}/imports/preview
+    //
+    // Uploads the file and calls FastAPI for classification without
+    // writing anything to the database. Returns the parsed data for
+    // user review. The client should send this body back to /confirm
+    // if the user approves.
+    [HttpPost("preview")]
+    [RequestSizeLimit(MaxFileSizeBytes)]
+    public async Task<IActionResult> Preview(
+        [FromRoute] Guid meiId,
+        IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized(new { error = "Invalid token subject." });
+
+        if (file is null || file.Length == 0)
+            return BadRequest(new { error = "A file is required." });
+
+        var extension = Path.GetExtension(file.FileName);
+        if (string.IsNullOrEmpty(extension) || !AllowedExtensions.Contains(extension))
+            return BadRequest(new
+            {
+                error = $"Unsupported file type '{extension}'. Allowed: .csv, .xlsx."
+            });
+
+        if (file.Length > MaxFileSizeBytes)
+            return BadRequest(new { error = $"File exceeds the {MaxFileSizeBytes} byte limit." });
+
+        try
+        {
+            var command = new PreviewImportCommand(
+                meiId,
+                userId,
+                file.FileName,
+                file.OpenReadStream(),
+                file.ContentType ?? "application/octet-stream");
+
+            var result = await _previewImportHandler.HandleAsync(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (MeiNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway,
+                new { error = $"Processing failed: {ex.Message}" });
+        }
+    }
+
+    // POST /v1/meis/{meiId}/imports/confirm
+    //
+    // Receives the preview result the user approved and persists all
+    // entities to the database. Returns 201 Created with the new Import row.
+    [HttpPost("confirm")]
+    public async Task<IActionResult> Confirm(
+        [FromRoute] Guid meiId,
+        [FromBody] PreviewImportResult preview,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized(new { error = "Invalid token subject." });
+
+        if (preview is null)
+            return BadRequest(new { error = "Preview data is required." });
+
+        try
+        {
+            var command = new ConfirmImportCommand(meiId, userId, preview);
+            var result = await _confirmImportHandler.HandleAsync(command, cancellationToken);
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { meiId, id = result.Id },
+                result);
+        }
+        catch (MeiNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
         }
     }
 

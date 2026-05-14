@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using Core.Application.DTOs;
 using Core.Application.Interfaces;
+using Core.Application.UseCases.Ai.GetAiContext;
 
 namespace Core.Infrastructure.Services;
 
@@ -64,6 +65,62 @@ public class FastApiService : IFastApiService
         if (parsed is null)
             throw new InvalidOperationException(
                 "FastAPI returned a 2xx response with an empty or unparsable body.");
+
+        return parsed;
+    }
+
+    public async Task<ChatResponseDto> ChatAsync(
+        string meiId,
+        string message,
+        IReadOnlyList<ChatHistoryItemDto> history,
+        GetAiContextResult context,
+        CancellationToken cancellationToken = default)
+    {
+        // Build a request body with explicit snake_case keys that match
+        // the FastAPI ChatRequest Pydantic model exactly. Using an
+        // anonymous object here avoids adding a request DTO that would
+        // only ever be used in this one call site.
+        var body = new
+        {
+            mei_id = meiId,
+            message,
+            history = history.Select(h => new { role = h.Role, content = h.Content }).ToArray(),
+            context = new
+            {
+                mei_name = context.MeiName,
+                plan = context.Plan,
+                annual_limit = context.AnnualLimit,
+                total_income = context.TotalIncome,
+                total_expense = context.TotalExpense,
+                net_profit = context.NetProfit,
+                transaction_count = context.TransactionCount,
+                product_count = context.ProductCount,
+                employee_count = context.EmployeeCount,
+                top_categories = context.TopCategories,
+                recent_transactions = context.RecentTransactions.Select(t => new
+                {
+                    type = t.Type,
+                    category = t.Category,
+                    amount = t.Amount,
+                    date = t.Date.ToString("yyyy-MM-dd"),
+                    description = t.Description,
+                }).ToArray()
+            }
+        };
+
+        var requestUrl = $"{_settings.BaseUrl.TrimEnd('/')}{_settings.ChatEndpoint}";
+
+        using var httpResponse = await _httpClient.PostAsJsonAsync(
+            requestUrl, body, cancellationToken);
+
+        httpResponse.EnsureSuccessStatusCode();
+
+        var parsed = await httpResponse.Content.ReadFromJsonAsync<ChatResponseDto>(
+            cancellationToken: cancellationToken);
+
+        if (parsed is null)
+            throw new InvalidOperationException(
+                "FastAPI returned a 2xx chat response with an empty or unparsable body.");
 
         return parsed;
     }
