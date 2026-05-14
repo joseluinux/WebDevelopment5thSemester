@@ -16,7 +16,7 @@
 
 set -uo pipefail
 
-API="http://127.0.0.1:8080"
+API="https://api.cs.lumemei.com.br"
 NAME="Imports Test"
 EMAIL="imports-test@lumemei.com.br"
 PASSWORD="test123"
