@@ -19,6 +19,8 @@
 html {
   scroll-behavior: smooth;
   color-scheme: dark;
+  /* Prevent gray artifact when auth pages scroll beyond viewport */
+  background-color: #0a0a0c;
 }
 
 body {

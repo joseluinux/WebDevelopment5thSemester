@@ -90,12 +90,33 @@ export function Features() {
               estar em dia com a Receita.
             </p>
           </div>
-          {/* Form mockup */}
-          <div className="hidden sm:block shrink-0 w-52 bg-surface-container-highest rounded-2xl p-4 border border-outline-variant/10 ml-6">
-            <div className="space-y-3">
-              <div className="h-2 w-3/4 bg-surface-bright rounded-full" />
-              <div className="h-2 w-1/2 bg-surface-bright rounded-full" />
-              <div className="h-8 w-full bg-primary/10 rounded-lg border border-primary/20" />
+          {/* Spreadsheet mockup */}
+          <div className="hidden sm:block shrink-0 w-56 bg-surface-container-highest rounded-2xl p-4 border border-outline-variant/10 ml-6 shadow-xl">
+            {/* Header row */}
+            <div className="flex gap-2 mb-2 pb-2 border-b border-outline-variant/10">
+              <div className="h-2 w-16 bg-primary/40 rounded-full" />
+              <div className="h-2 w-10 bg-surface-bright/40 rounded-full ml-auto" />
+              <div className="h-2 w-10 bg-surface-bright/40 rounded-full" />
+            </div>
+            {/* Data rows */}
+            {[70, 50, 85, 60, 40].map((w, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 py-1.5 border-b border-outline-variant/5"
+              >
+                <div
+                  className={`h-1.5 rounded-full bg-on-surface-variant/20`}
+                  style={{ width: `${w}%` }}
+                />
+                <div className="h-1.5 w-8 rounded-full bg-primary/20 ml-auto" />
+                <div className="h-1.5 w-8 rounded-full bg-tertiary/20" />
+              </div>
+            ))}
+            {/* Total row */}
+            <div className="flex items-center gap-2 pt-2 mt-1">
+              <div className="h-2 w-10 rounded-full bg-on-surface-variant/30" />
+              <div className="h-2 w-10 rounded-full bg-primary/50 ml-auto" />
+              <div className="h-2 w-10 rounded-full bg-tertiary/40" />
             </div>
           </div>
         </div>

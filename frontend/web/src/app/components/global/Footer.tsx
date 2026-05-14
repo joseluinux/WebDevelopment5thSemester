@@ -96,17 +96,26 @@ export function Footer() {
             </div>
             <ul className="space-y-2 text-on-surface-variant text-sm">
               <li>
-                <Link className="hover:text-primary transition-colors" href="/">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/politica-de-privacidade"
+                >
                   Privacidade
                 </Link>
               </li>
               <li>
-                <Link className="hover:text-primary transition-colors" href="/">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/termos-de-uso"
+                >
                   Termos
                 </Link>
               </li>
               <li>
-                <Link className="hover:text-primary transition-colors" href="/">
+                <Link
+                  className="hover:text-primary transition-colors"
+                  href="/politica-de-cookies"
+                >
                   Cookies
                 </Link>
               </li>

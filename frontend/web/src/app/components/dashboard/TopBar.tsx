@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 
-export function TopBar() {
+export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -25,6 +25,14 @@ export function TopBar() {
   return (
     <header className="bg-[#1C1B1D]/80 backdrop-blur-xl sticky top-0 z-40 shadow-2xl shadow-black/40 flex justify-between items-center w-full px-6 py-3 border-none shadow-[0px_1px_0px_0px_rgba(255,255,255,0.05)]">
       <div className="flex items-center gap-4">
+        {/* Hamburger - mobile only */}
+        <button
+          className="md:hidden text-[#C4C6D5] p-2 rounded-full hover:bg-[#2B292C] transition-colors"
+          onClick={onMenuClick}
+          aria-label="Abrir menu"
+        >
+          <span className="material-symbols-outlined">menu</span>
+        </button>
         {/* Mobile brand */}
         <div className="md:hidden text-xl font-bold text-white tracking-tighter font-headline">
           LUMEMEI
