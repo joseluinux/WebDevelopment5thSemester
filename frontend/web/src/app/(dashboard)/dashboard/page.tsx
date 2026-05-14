@@ -4,9 +4,10 @@ import { formatCurrency } from "@/utils/formatters";
 import Link from "next/link";
 import { useMeiContext } from "@/contexts/MeiContext";
 import { useTransactions } from "@/hooks/useTransactions";
+import { useInsights } from "@/hooks/useInsights";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -21,35 +22,30 @@ export default function DashboardPage() {
     }
   }, [authLoading, isMeisLoading, user, meis.length, router]);
 
-  // Current year date range
+  const meiId = activeMei?.id ?? "";
+
+  // Aggregated stats from the dedicated insights endpoint
+  const { data: insights, isLoading: insightsLoading } = useInsights(meiId);
+
+  // Transactions used only for the "Recent Transactions" list
   const now = new Date();
   const from = `${now.getFullYear()}-01-01`;
   const to = now.toISOString().split("T")[0];
 
   const { data: transactions = [], isLoading: txLoading } = useTransactions({
-    meiId: activeMei?.id ?? "",
+    meiId,
     from,
     to,
   });
 
-  const revenue = useMemo(
-    () =>
-      transactions
-        .filter((t) => t.type === "income")
-        .reduce((sum, t) => sum + t.amount, 0),
-    [transactions],
-  );
-  const expenses = useMemo(
-    () =>
-      transactions
-        .filter((t) => t.type === "expense")
-        .reduce((sum, t) => sum + t.amount, 0),
-    [transactions],
-  );
-  const netProfit = revenue - expenses;
-  const annualLimit = activeMei?.annualLimit ?? 81000;
-  const limitPct = Math.min(100, Math.round((revenue / annualLimit) * 100));
-  const margin = revenue > 0 ? Math.round((netProfit / revenue) * 100) : 0;
+  const revenue = insights?.totalIncome ?? 0;
+  const expenses = insights?.totalExpense ?? 0;
+  const netProfit = insights?.netProfit ?? 0;
+  const annualLimit = insights?.annualLimit ?? activeMei?.annualLimit ?? 81000;
+  const limitPct = Math.min(100, Math.round(insights?.annualLimitUsedPct ?? 0));
+  const margin = Math.round(insights?.profitMargin ?? 0);
+
+  const statsLoading = insightsLoading;
 
   if (isMeisLoading) {
     return (
@@ -135,7 +131,7 @@ export default function DashboardPage() {
             <h4 className="font-label text-on-surface-variant uppercase tracking-widest text-[10px] mb-2">
               Receita Total (Ano)
             </h4>
-            {txLoading ? (
+            {statsLoading ? (
               <span className="material-symbols-outlined animate-spin text-primary">
                 progress_activity
               </span>
@@ -150,7 +146,8 @@ export default function DashboardPage() {
               trending_up
             </span>
             <span>
-              {transactions.filter((t) => t.type === "income").length}{" "}
+              {insights?.transactionCount ??
+                transactions.filter((t) => t.type === "income").length}{" "}
               transações
             </span>
           </div>
@@ -162,7 +159,7 @@ export default function DashboardPage() {
             <h4 className="font-label text-on-surface-variant uppercase tracking-widest text-[10px] mb-2">
               Despesas Totais (Ano)
             </h4>
-            {txLoading ? (
+            {statsLoading ? (
               <span className="material-symbols-outlined animate-spin text-primary">
                 progress_activity
               </span>
@@ -190,7 +187,7 @@ export default function DashboardPage() {
             <h4 className="font-label text-on-surface-variant uppercase tracking-widest text-[10px] mb-2">
               Lucro Líquido
             </h4>
-            {txLoading ? (
+            {statsLoading ? (
               <span className="material-symbols-outlined animate-spin text-primary">
                 progress_activity
               </span>
@@ -340,7 +337,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <Link
-            href="/dashboard/oracle-ai"
+            href="/dashboard/insights"
             className="mt-6 w-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-outline-variant/20 py-3 rounded-lg font-label text-xs uppercase tracking-widest transition-colors flex justify-center items-center gap-2 relative z-10"
           >
             <span>Ver Análise Completa</span>

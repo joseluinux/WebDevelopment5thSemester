@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 import { useMeiContext } from "@/contexts/MeiContext";
 import { useChat } from "@/hooks/useChat";
@@ -29,8 +30,73 @@ const SUGGESTED_PROMPTS = [
   },
 ];
 
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+function makeAnimatedComponents(animate: boolean) {
+  let idx = 0;
+  const delay = (base: number) =>
+    animate
+      ? { animation: `aiMsgFade 0.35s ease-out ${base * idx++ * 0.07}s both` }
+      : {};
+
+  return {
+    p: ({ children }: { children?: React.ReactNode }) => (
+      <p className="mb-2 last:mb-0" style={delay(1)}>
+        {children}
+      </p>
+    ),
+    ul: ({ children }: { children?: React.ReactNode }) => (
+      <ul className="list-disc pl-4 mb-2 space-y-0.5" style={delay(1)}>
+        {children}
+      </ul>
+    ),
+    ol: ({ children }: { children?: React.ReactNode }) => (
+      <ol className="list-decimal pl-4 mb-2 space-y-0.5" style={delay(1)}>
+        {children}
+      </ol>
+    ),
+    li: ({ children }: { children?: React.ReactNode }) => (
+      <li style={delay(0.6)}>{children}</li>
+    ),
+    strong: ({ children }: { children?: React.ReactNode }) => (
+      <strong className="font-semibold text-on-surface">{children}</strong>
+    ),
+    em: ({ children }: { children?: React.ReactNode }) => (
+      <em className="italic">{children}</em>
+    ),
+    code: ({ children }: { children?: React.ReactNode }) => (
+      <code className="bg-surface-container-highest px-1 py-0.5 rounded text-xs font-mono">
+        {children}
+      </code>
+    ),
+    h1: ({ children }: { children?: React.ReactNode }) => (
+      <h1 className="font-headline font-bold text-base mb-2" style={delay(1)}>
+        {children}
+      </h1>
+    ),
+    h2: ({ children }: { children?: React.ReactNode }) => (
+      <h2
+        className="font-headline font-semibold text-sm mb-1.5"
+        style={delay(1)}
+      >
+        {children}
+      </h2>
+    ),
+    h3: ({ children }: { children?: React.ReactNode }) => (
+      <h3 className="font-headline font-semibold text-sm mb-1" style={delay(1)}>
+        {children}
+      </h3>
+    ),
+  };
+}
+
+function MessageBubble({
+  msg,
+  isLatest,
+}: {
+  msg: ChatMessage;
+  isLatest?: boolean;
+}) {
   const isUser = msg.role === "user";
+  const components = isUser ? undefined : makeAnimatedComponents(!!isLatest);
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
       {!isUser && (
@@ -44,13 +110,19 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         </div>
       )}
       <div
-        className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+        className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
           isUser
-            ? "prism-gradient text-[#002979] rounded-br-sm"
+            ? "prism-gradient text-[#002979] rounded-br-sm whitespace-pre-wrap"
             : "bg-surface-container text-on-surface border border-outline-variant/10 rounded-bl-sm"
         }`}
       >
-        {msg.content}
+        {isUser ? (
+          msg.content
+        ) : (
+          <ReactMarkdown components={components as never}>
+            {msg.content}
+          </ReactMarkdown>
+        )}
       </div>
     </div>
   );
@@ -166,9 +238,12 @@ export default function LumemeiAIPage() {
           </div>
         ) : (
           <div className="py-4 px-1">
-            {messages.map((msg, i) => (
-              <MessageBubble key={i} msg={msg} />
-            ))}
+            {messages.map((msg, i) => {
+              const isLatest =
+                msg.role === "assistant" &&
+                i === messages.findLastIndex((m) => m.role === "assistant");
+              return <MessageBubble key={i} msg={msg} isLatest={isLatest} />;
+            })}
             {isLoading && <TypingIndicator />}
             <div ref={bottomRef} />
           </div>

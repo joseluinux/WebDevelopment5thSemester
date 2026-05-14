@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 import apiClient from "@/lib/apiClient";
 import axios from "axios";
 
-export default function ForgotPasswordPage() {
+function ResetPasswordForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,18 +18,25 @@ export default function ForgotPasswordPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setIsLoading(true);
     const fd = new FormData(e.currentTarget);
-    const email = fd.get("email") as string;
+    const password = fd.get("password") as string;
+    const confirm = fd.get("confirm") as string;
+
+    if (password !== confirm) {
+      setError("As senhas não coincidem.");
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      await apiClient.post("/v1/auth/forgot-password", { email });
+      await apiClient.post("/v1/auth/reset-password", { token, password });
       setSuccess(true);
+      setTimeout(() => router.push("/login"), 3000);
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 404) {
-        // Don't reveal whether email exists — show success anyway
-        setSuccess(true);
+      if (axios.isAxiosError(err) && err.response?.status === 400) {
+        setError("Link inválido ou expirado. Solicite um novo.");
       } else {
-        setError("Erro ao enviar. Tente novamente.");
+        setError("Erro ao redefinir a senha. Tente novamente.");
       }
     } finally {
       setIsLoading(false);
@@ -43,8 +55,8 @@ export default function ForgotPasswordPage() {
             LUMEMEI
           </h1>
           <p className="text-on-surface-variant text-xl leading-relaxed mb-8 font-light">
-            Sem problemas. Enviaremos um link seguro para você redefinir sua
-            senha rapidamente.
+            Sua segurança é prioridade. Defina uma nova senha forte para
+            proteger sua conta.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-6 bg-surface-container rounded-xl border border-white/5">
@@ -52,13 +64,13 @@ export default function ForgotPasswordPage() {
                 className="material-symbols-outlined text-primary mb-3 block"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
-                mail_lock
+                lock_reset
               </span>
               <h3 className="font-headline font-bold text-white mb-1">
-                Link Seguro
+                Senha Segura
               </h3>
               <p className="text-sm text-on-surface-variant">
-                Enviamos um link criptografado para seu e-mail.
+                Use ao menos 8 caracteres com letras e números.
               </p>
             </div>
             <div className="p-6 bg-surface-container rounded-xl border border-white/5">
@@ -66,13 +78,13 @@ export default function ForgotPasswordPage() {
                 className="material-symbols-outlined text-primary mb-3 block"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
-                schedule
+                shield_with_heart
               </span>
               <h3 className="font-headline font-bold text-white mb-1">
-                Expira em 1h
+                Dados Protegidos
               </h3>
               <p className="text-sm text-on-surface-variant">
-                O link de redefinição é válido por 1 hora.
+                Seus dados financeiros permanecem seguros.
               </p>
             </div>
           </div>
@@ -92,31 +104,52 @@ export default function ForgotPasswordPage() {
           {/* Page Label */}
           <div className="space-y-1">
             <span className="font-label text-xs uppercase tracking-widest text-primary font-bold">
-              Recuperação de Acesso
+              Segurança
             </span>
             <h2 className="font-headline text-2xl font-bold text-white">
               Redefinir Senha
             </h2>
             <p className="text-on-surface-variant text-sm">
-              Informe seu e-mail para receber as instruções de redefinição.
+              Crie uma nova senha para acessar sua conta.
             </p>
           </div>
 
           {/* Form Card */}
           <div className="bg-surface-container p-8 rounded-2xl border border-white/5 shadow-2xl">
-            {success ? (
+            {!token ? (
+              <div className="px-4 py-6 rounded-lg bg-error/10 border border-error/20 text-center">
+                <span
+                  className="material-symbols-outlined text-error text-4xl mb-2 block"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  link_off
+                </span>
+                <p className="text-on-surface font-semibold mb-1">
+                  Link inválido
+                </p>
+                <p className="text-on-surface-variant text-sm">
+                  Este link é inválido ou expirou.{" "}
+                  <Link
+                    href="/forgot-password"
+                    className="text-primary hover:underline"
+                  >
+                    Solicite um novo.
+                  </Link>
+                </p>
+              </div>
+            ) : success ? (
               <div className="px-4 py-6 rounded-lg bg-primary/10 border border-primary/20 text-center">
                 <span
                   className="material-symbols-outlined text-primary text-4xl mb-2 block"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
-                  mark_email_read
+                  check_circle
                 </span>
                 <p className="text-on-surface font-semibold mb-1">
-                  Link enviado!
+                  Senha redefinida!
                 </p>
                 <p className="text-on-surface-variant text-sm">
-                  Verifique sua caixa de entrada para o link de redefinição.
+                  Redirecionando para o login em instantes…
                 </p>
               </div>
             ) : (
@@ -127,25 +160,49 @@ export default function ForgotPasswordPage() {
                   </div>
                 )}
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Nova Senha */}
                   <div className="space-y-2">
                     <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
-                      E-mail
+                      Nova Senha
                     </label>
                     <div className="relative group">
                       <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors">
-                        alternate_email
+                        lock
                       </span>
                       <input
-                        type="email"
-                        name="email"
-                        placeholder="nome@exemplo.com"
+                        type="password"
+                        name="password"
+                        placeholder="Mínimo 8 caracteres"
                         required
+                        minLength={8}
                         disabled={isLoading}
                         className="w-full bg-surface-container-lowest border-none rounded-lg py-4 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary/30 transition-all font-body disabled:opacity-50 outline-none"
                       />
                     </div>
                   </div>
 
+                  {/* Confirmar Senha */}
+                  <div className="space-y-2">
+                    <label className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">
+                      Confirmar Senha
+                    </label>
+                    <div className="relative group">
+                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors">
+                        lock_open
+                      </span>
+                      <input
+                        type="password"
+                        name="confirm"
+                        placeholder="Repita a nova senha"
+                        required
+                        minLength={8}
+                        disabled={isLoading}
+                        className="w-full bg-surface-container-lowest border-none rounded-lg py-4 pl-12 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:ring-1 focus:ring-primary/30 transition-all font-body disabled:opacity-50 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit */}
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -157,7 +214,7 @@ export default function ForgotPasswordPage() {
                       </span>
                     ) : (
                       <>
-                        <span>Enviar Link</span>
+                        <span>Salvar Nova Senha</span>
                         <span className="material-symbols-outlined text-lg">
                           arrow_forward
                         </span>
@@ -184,5 +241,13 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

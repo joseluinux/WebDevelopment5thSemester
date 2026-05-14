@@ -79,6 +79,19 @@ body {
   border-radius: 6px;
 }
 
+/* ─── AI chat message paragraph fade-in animation ─── */
+@keyframes aiMsgFade {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ─── Glass / Glow Utilities ─── */
 .glass-card {
   background: rgba(28, 27, 29, 0.55);
