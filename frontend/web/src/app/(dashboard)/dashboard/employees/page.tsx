@@ -86,17 +86,23 @@ export default function EmployeesPage() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-label text-on-surface-variant uppercase tracking-wide">
-                    Tipo de contrato
+                    Tipo de contrato <span className="text-error">*</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: CLT, MEI, PJ, Freelancer"
+                  <select
+                    required
                     value={form.contractType ?? ""}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, contractType: e.target.value }))
                     }
                     className="w-full bg-[#1c1b1d] border border-white/10 rounded-lg py-3 px-4 text-sm text-on-surface focus:ring-1 focus:ring-primary outline-none"
-                  />
+                  >
+                    <option value="" disabled>
+                      Selecione...
+                    </option>
+                    <option value="clt">CLT</option>
+                    <option value="pj">PJ (Pessoa Jurídica)</option>
+                    <option value="intern">Estagiário</option>
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
@@ -106,9 +112,10 @@ export default function EmployeesPage() {
                     <input
                       type="number"
                       placeholder="0,00"
-                      min={0}
+                      min={0.01}
                       step={0.01}
-                      value={form.salary ?? ""}
+                      required
+                      value={form.salary || ""}
                       onChange={(e) =>
                         setForm((f) => ({
                           ...f,

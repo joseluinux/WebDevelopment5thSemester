@@ -157,7 +157,9 @@ export default function LumemeiAIPage() {
                       {prompt.title}
                     </p>
                   </div>
-                  <p className="text-on-surface-variant text-xs">{prompt.desc}</p>
+                  <p className="text-on-surface-variant text-xs">
+                    {prompt.desc}
+                  </p>
                 </button>
               ))}
             </div>
@@ -213,12 +215,6 @@ export default function LumemeiAIPage() {
         <p className="text-center text-on-surface-variant/40 text-xs mt-3">
           LUMEMEI AI pode cometer erros. Verifique informações financeiras
           críticas.
-        </p>
-      </div>
-    </div>
-  );
-}
-
         </p>
       </div>
     </div>

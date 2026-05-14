@@ -187,6 +187,51 @@ export interface ApiError {
   status: number;
 }
 
+// ─── Insights ────────────────────────────────────────────────────────────────
+
+/** Monthly aggregation row returned by GET /v1/meis/:id/insights */
+export interface InsightsMonthlyBreakdown {
+  /** ISO month key: "YYYY-MM" — sorts lexically in chronological order */
+  month: string;
+  income: number;
+  expense: number;
+  netProfit: number;
+}
+
+/** Top-5 transaction item returned by the insights endpoint */
+export interface InsightsTransactionItem {
+  type: "income" | "expense";
+  category: string | null;
+  amount: number;
+  /** DateOnly serialised as "YYYY-MM-DD" */
+  date: string;
+  description: string | null;
+}
+
+/** Full payload of GET /v1/meis/:id/insights */
+export interface InsightsResult {
+  meiId: string;
+  meiName: string;
+  plan: string;
+  annualLimit: number;
+  annualLimitUsedPct: number;
+  totalIncome: number;
+  totalExpense: number;
+  netProfit: number;
+  profitMargin: number;
+  monthlyAvgIncome: number;
+  /** Months until the annual limit is reached. Null when income is 0 or limit already exceeded. */
+  monthsUntilLimit: number | null;
+  transactionCount: number;
+  productCount: number;
+  employeeCount: number;
+  monthlyBreakdown: InsightsMonthlyBreakdown[];
+  incomeByCategory: Record<string, number>;
+  expenseByCategory: Record<string, number>;
+  topIncomes: InsightsTransactionItem[];
+  topExpenses: InsightsTransactionItem[];
+}
+
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 
 export interface ChatMessage {

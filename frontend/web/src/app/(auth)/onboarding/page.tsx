@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCreateMei } from "@/hooks/useMeis";
 import { useMeiContext } from "@/contexts/MeiContext";
@@ -9,9 +9,16 @@ import axios from "axios";
 export default function OnboardingPage() {
   const router = useRouter();
   const createMei = useCreateMei();
-  const { refetchMeis } = useMeiContext();
+  const { refetchMeis, meis, isMeisLoading } = useMeiContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Guard: users who already have a MEI should never be on the onboarding page.
+  useEffect(() => {
+    if (!isMeisLoading && meis.length > 0) {
+      router.replace("/dashboard");
+    }
+  }, [meis, isMeisLoading, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
