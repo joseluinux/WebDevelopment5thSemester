@@ -9,7 +9,9 @@ import axios from "axios";
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
+  const rawToken = searchParams.get("token");
+  // O + nos tokens base64 vira espaço quando lido sem decodificar.
+  const token = rawToken ? decodeURIComponent(rawToken) : null;
 
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);

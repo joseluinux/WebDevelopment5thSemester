@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 
 import apiClient from "@/lib/apiClient";
-import chatApiClient from "@/lib/chatApiClient";
 import type { ChatMessage } from "@/types";
 
 export function useChat(meiId: string) {
@@ -9,9 +8,8 @@ export function useChat(meiId: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cache do contexto financeiro por MEI.
-  // Buscado uma vez do C# e reutilizado em todas as mensagens da sessão.
-  const contextRef = useRef<Record<string, unknown> | null>(null);
+  // Histórico serializado que o C# repassa ao FastAPI por volta.
+  const historyRef = useRef<{ role: string; content: string }[]>([]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -25,34 +23,32 @@ export function useChat(meiId: string) {
       setError(null);
 
       try {
-        // 1. Busca o contexto financeiro no C# (apenas na primeira mensagem)
-        if (!contextRef.current) {
-          const { data: ctx } = await apiClient.get<Record<string, unknown>>(
-            `/v1/meis/${meiId}/ai/context`,
-          );
-          contextRef.current = ctx;
-        }
-
-        const history = messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
-
-        // 2. Chama o FastAPI diretamente — sem passar pelo C#
-        const { data } = await chatApiClient.post<{ reply: string }>(
-          "/api/chat/message",
+        // Chama o endpoint de chat do C# que:
+        //  1. Valida o JWT e a ownership do MEI
+        //  2. Busca o contexto financeiro diretamente do banco de dados
+        //  3. Chama o FastAPI com as chaves em snake_case corretas
+        //  4. Retorna { reply }
+        const { data } = await apiClient.post<{ reply: string }>(
+          `/v1/meis/${meiId}/ai/chat`,
           {
-            mei_id: meiId,
             message: trimmed,
-            history,
-            context: contextRef.current,
+            history: historyRef.current,
           },
         );
 
-        setMessages([
-          ...optimisticMessages,
+        const assistantMsg: ChatMessage = {
+          role: "assistant",
+          content: data.reply,
+        };
+
+        // Atualiza o histórico em cache para a próxima rodada
+        historyRef.current = [
+          ...historyRef.current,
+          { role: "user", content: trimmed },
           { role: "assistant", content: data.reply },
-        ]);
+        ];
+
+        setMessages([...optimisticMessages, assistantMsg]);
       } catch {
         setError("Falha ao obter resposta. Tente novamente.");
         // Rollback the optimistic user message on error
@@ -67,7 +63,7 @@ export function useChat(meiId: string) {
   const reset = useCallback(() => {
     setMessages([]);
     setError(null);
-    contextRef.current = null; // limpa cache ao reiniciar a conversa
+    historyRef.current = [];
   }, []);
 
   return { messages, isLoading, error, sendMessage, reset };
