@@ -2,7 +2,11 @@ import axios from "axios";
 import { getRefreshToken, setTokens, clearTokens } from "./storage";
 import type { LoginResponse } from "@/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const _rawUrl =
+  process.env.NEXT_PUBLIC_API_URL ?? "https://api.cs.lumemei.com.br";
+// Guard: se o env var foi buildado sem protocolo (ex: "api.cs.lumemei.com.br"),
+// o Axios trataria como caminho relativo → https://lumemei.com.br/api.cs... (errado)
+const BASE_URL = _rawUrl.startsWith("http") ? _rawUrl : `https://${_rawUrl}`;
 
 // ─── Module-level access token (never persisted to disk) ─────────────────────
 let _accessToken: string | null = null;

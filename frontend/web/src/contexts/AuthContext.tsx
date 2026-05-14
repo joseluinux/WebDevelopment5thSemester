@@ -7,7 +7,6 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import axios from "axios";
 import apiClient, { setAccessToken } from "@/lib/apiClient";
 import { getRefreshToken, setTokens, clearTokens } from "@/lib/storage";
 import type { UserProfile, LoginResponse } from "@/types";
@@ -36,10 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       try {
-        const BASE_URL =
-          process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-        const { data } = await axios.post<LoginResponse>(
-          `${BASE_URL}/v1/auth/refresh`,
+        const { data } = await apiClient.post<LoginResponse>(
+          "/v1/auth/refresh",
           { token: refreshToken },
         );
         setTokens(data.accessToken, data.refreshToken);
