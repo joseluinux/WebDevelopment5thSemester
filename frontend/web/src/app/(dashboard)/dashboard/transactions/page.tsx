@@ -114,7 +114,7 @@ export default function TransactionsPage() {
             Transactions
           </h1>
           <p className="text-on-surface-variant font-body">
-            {activeMei ? activeMei.name : "\u2014"} \u2014 Revise e gerencie o
+            {activeMei ? activeMei.name : "—"} — Revise e gerencie o
             livro-caixa.
           </p>
         </div>
@@ -131,7 +131,7 @@ export default function TransactionsPage() {
       {showNew && (
         <Portal>
           <TxModal
-            title="Nova Transao"
+            title="Nova Transação"
             form={newForm}
             setForm={setNewForm}
             onSubmit={handleCreate}
@@ -145,7 +145,7 @@ export default function TransactionsPage() {
       {editTx && (
         <Portal>
           <TxModal
-            title="Editar Transao"
+            title="Editar Transação"
             form={editForm}
             setForm={setEditForm}
             onSubmit={handleEdit}
@@ -165,10 +165,10 @@ export default function TransactionsPage() {
                 warning
               </span>
               <h2 className="font-headline text-lg font-bold text-on-surface mb-2">
-                Excluir transao?
+                Excluir transação?
               </h2>
               <p className="text-on-surface-variant text-sm mb-6">
-                Esta ao no pode ser desfeita.
+                Esta ação não pode ser desfeita.
               </p>
               <div className="flex gap-3">
                 <button
@@ -224,7 +224,7 @@ export default function TransactionsPage() {
           </select>
         </div>
         <span className="text-xs text-on-surface-variant font-label">
-          {filtered.length} transaes
+          {filtered.length} transações
         </span>
       </div>
 
@@ -240,12 +240,12 @@ export default function TransactionsPage() {
           <span className="material-symbols-outlined text-4xl">
             receipt_long
           </span>
-          <p className="font-body text-sm">Nenhuma transao encontrada.</p>
+          <p className="font-body text-sm">Nenhuma transação encontrada.</p>
           <button
             onClick={() => setShowNew(true)}
             className="text-primary text-xs underline cursor-pointer"
           >
-            Adicionar transao
+            Adicionar transação
           </button>
         </div>
       ) : (
@@ -273,7 +273,7 @@ export default function TransactionsPage() {
                         </div>
                         <div>
                           <h4 className="font-display font-medium text-on-surface">
-                            {tx.description ?? tx.category ?? "\u2014"}
+                            {tx.description ?? tx.category ?? "—"}
                           </h4>
                           {tx.category && (
                             <span className="bg-surface-container-highest px-2 py-0.5 rounded text-xs font-label text-on-surface-variant border border-outline-variant/20 mt-1 inline-block">

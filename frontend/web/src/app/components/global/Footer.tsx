@@ -16,18 +16,10 @@ export function Footer() {
             Empoderando o microempreendedor individual com inteligência de dados
             e simplicidade radical.
           </p>
-          <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant hover:text-primary cursor-pointer transition-colors">
-              <span className="material-symbols-outlined">public</span>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant hover:text-primary cursor-pointer transition-colors">
-              <span className="material-symbols-outlined">language</span>
-            </div>
-          </div>
         </div>
 
         {/* Links */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-12">
+        <div className="grid grid-cols-2 gap-12">
           <div className="space-y-4">
             <div className="font-headline font-bold text-sm uppercase tracking-widest text-on-surface">
               Produto
@@ -55,37 +47,6 @@ export function Footer() {
                   href="/register"
                 >
                   Segurança
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div className="space-y-4">
-            <div className="font-headline font-bold text-sm uppercase tracking-widest text-on-surface">
-              Recursos
-            </div>
-            <ul className="space-y-2 text-on-surface-variant text-sm">
-              <li>
-                <Link
-                  className="hover:text-primary transition-colors"
-                  href="/#features"
-                >
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link
-                  className="hover:text-primary transition-colors"
-                  href="/#features"
-                >
-                  Guia MEI
-                </Link>
-              </li>
-              <li>
-                <Link
-                  className="hover:text-primary transition-colors"
-                  href="/login"
-                >
-                  Suporte
                 </Link>
               </li>
             </ul>
@@ -125,7 +86,7 @@ export function Footer() {
       </div>
 
       <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-outline-variant/10 text-center text-on-surface-variant text-xs">
-        © 2024 LUMEMEI Intelligence. Todos os direitos reservados.
+        © 2026 LUMEMEI Intelligence. Todos os direitos reservados.
       </div>
     </footer>
   );
