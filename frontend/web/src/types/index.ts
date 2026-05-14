@@ -121,6 +121,57 @@ export type TransactionType = "income" | "expense";
 export type ImportStatus = "pending" | "processing" | "completed" | "failed";
 export type ContractType = "CLT" | "PJ" | "Freelancer";
 
+// ─── Import preview ───────────────────────────────────────────────────────────
+// Returned by POST /imports/preview. The same object is sent back
+// as the request body to POST /imports/confirm once the user approves.
+
+export interface ImportTransactionPreview {
+  type: string;
+  category: string | null;
+  amount: number;
+  description: string | null;
+  date: string; // "YYYY-MM-DD"
+}
+
+export interface ImportProductPreview {
+  name: string;
+  cost: number | null;
+  price: number | null;
+  desiredMargin: number | null;
+}
+
+export interface ImportEmployeePreview {
+  name: string;
+  contractType: string | null;
+  salary: number | null;
+  charges: number | null;
+}
+
+export interface ImportPreview {
+  fileUri: string;
+  fileName: string;
+  transactions: ImportTransactionPreview[];
+  products: ImportProductPreview[];
+  employees: ImportEmployeePreview[];
+  totalRows: number;
+  processedRows: number;
+  errors: string[];
+  status: string;
+}
+
+/** GET /v1/meis/:id/imports  |  POST /imports/confirm */
+export interface ImportResult {
+  id: string;
+  meiId: string;
+  fileUri: string;
+  status: string;
+  totalRows: number | null;
+  processedRows: number | null;
+  errors: string[] | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
 // ─── DTOs de resposta ──────────────────────────────────────────────────────────
 
 export interface PaginatedResponse<T> {
@@ -134,6 +185,13 @@ export interface ApiError {
   message: string;
   code?: string;
   status: number;
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
 // ─── DTOs de request ──────────────────────────────────────────────────────────

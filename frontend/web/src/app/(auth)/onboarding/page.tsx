@@ -99,14 +99,14 @@ export default function OnboardingPage() {
           <div className="space-y-4">
             <div className="flex justify-between items-end mb-2">
               <span className="font-label text-xs uppercase tracking-widest text-primary font-bold">
-                Step 02 of 04
+                Step 02 of 02
               </span>
               <span className="font-headline text-2xl font-bold text-white">
                 Business DNA
               </span>
             </div>
             <div className="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
-              <div className="h-full prism-gradient w-2/4 transition-all duration-500" />
+              <div className="h-full prism-gradient w-full transition-all duration-500" />
             </div>
           </div>
 
