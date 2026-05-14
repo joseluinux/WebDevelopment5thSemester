@@ -255,6 +255,17 @@ builder.Services.AddSingleton(new ResendSettings
 });
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendPolicy", policy =>
+    {
+        policy.WithOrigins("https://lumemei.com.br")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); 
+    });
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -267,6 +278,8 @@ if (app.Environment.IsDevelopment())
 app.UseCors("FrontendPolicy");
 
 app.UseHttpsRedirection();
+
+app.UseCors("FrontendPolicy");
 
 // Authentication MUST run before authorization in the middleware pipeline.
 app.UseAuthentication();
