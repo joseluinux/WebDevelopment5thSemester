@@ -131,18 +131,10 @@ function MessageBubble({
 function TypingIndicator() {
   return (
     <div className="flex justify-start mb-4">
-      <div className="w-8 h-8 rounded-xl bg-primary-container/10 border border-primary-container/20 flex items-center justify-center mr-3 shrink-0">
-        <span
-          className="material-symbols-outlined text-primary-container text-base"
-          style={{ fontVariationSettings: "'FILL' 1" }}
-        >
-          psychology
-        </span>
-      </div>
-      <div className="bg-surface-container border border-outline-variant/10 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-on-surface-variant/50 animate-bounce [animation-delay:0ms]" />
-        <span className="w-1.5 h-1.5 rounded-full bg-on-surface-variant/50 animate-bounce [animation-delay:150ms]" />
-        <span className="w-1.5 h-1.5 rounded-full bg-on-surface-variant/50 animate-bounce [animation-delay:300ms]" />
+      <div className="w-8 h-8 rounded-xl bg-primary-container/10 border border-primary-container/20 flex items-center justify-center gap-0.5 mr-3 shrink-0">
+        <span className="w-1 h-1 rounded-full bg-primary-container animate-bounce [animation-delay:0ms]" />
+        <span className="w-1 h-1 rounded-full bg-primary-container animate-bounce [animation-delay:150ms]" />
+        <span className="w-1 h-1 rounded-full bg-primary-container animate-bounce [animation-delay:300ms]" />
       </div>
     </div>
   );

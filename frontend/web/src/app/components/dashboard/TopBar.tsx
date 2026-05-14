@@ -37,27 +37,9 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         <div className="md:hidden text-xl font-bold text-white tracking-tighter font-headline">
           LUMEMEI
         </div>
-        {/* Search */}
-        <div className="hidden sm:flex items-center bg-surface-container-lowest rounded-full px-4 py-2 border border-outline-variant/15 w-64 focus-within:border-primary/30 transition-colors">
-          <span className="material-symbols-outlined text-on-surface-variant text-sm mr-2">
-            search
-          </span>
-          <input
-            className="bg-transparent border-none text-sm font-body text-on-surface focus:ring-0 w-full placeholder-on-surface-variant p-0 outline-none"
-            placeholder="Search transactions..."
-            type="text"
-          />
-        </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="text-[#C4C6D5] active:opacity-80 transition-all hover:bg-[#2B292C] transition-colors duration-200 p-2 rounded-full flex items-center justify-center">
-          <span className="material-symbols-outlined">notifications</span>
-        </button>
-        <button className="text-[#C4C6D5] active:opacity-80 transition-all hover:bg-[#2B292C] transition-colors duration-200 p-2 rounded-full flex items-center justify-center">
-          <span className="material-symbols-outlined">apps</span>
-        </button>
-        <div className="w-px h-6 bg-outline-variant/30 mx-2" />
         {/* User menu */}
         <div className="relative group">
           <Link
