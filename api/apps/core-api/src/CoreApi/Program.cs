@@ -56,12 +56,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
-        policy
-            .WithOrigins(
+        policy.WithOrigins(
                 "http://localhost:3000",
-                "https://localhost:3000")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+                "https://localhost:3000",
+                "https://lumemei.com.br")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -255,17 +256,6 @@ builder.Services.AddSingleton(new ResendSettings
 });
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("FrontendPolicy", policy =>
-    {
-        policy.WithOrigins("https://lumemei.com.br")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials(); 
-    });
-});
-
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -274,17 +264,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// CORS must run before authentication/authorization in the pipeline.
 app.UseCors("FrontendPolicy");
-
 app.UseHttpsRedirection();
-
-app.UseCors("FrontendPolicy");
-
-// Authentication MUST run before authorization in the middleware pipeline.
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
