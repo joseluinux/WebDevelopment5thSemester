@@ -60,7 +60,8 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "https://localhost:3000",
                 "http://lumemei.com.br",
-                "https://lumemei.com.br")
+                "https://lumemei.com.br",
+                "https://api.python.lumemei.com.br")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
