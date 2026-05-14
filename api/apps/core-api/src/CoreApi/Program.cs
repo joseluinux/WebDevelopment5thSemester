@@ -59,6 +59,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:3000",
                 "https://localhost:3000",
+                "http://lumemei.com.br",
                 "https://lumemei.com.br")
               .AllowAnyHeader()
               .AllowAnyMethod()
@@ -265,7 +266,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("FrontendPolicy");
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
