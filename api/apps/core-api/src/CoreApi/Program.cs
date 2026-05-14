@@ -4,6 +4,7 @@ using Core.Application.Interfaces;
 using Core.Application.UseCases.Ai.GetAiContext;
 using Core.Application.UseCases.Ai.GetFinancialSummary;
 using Core.Application.UseCases.Ai.Chat;
+using Core.Application.UseCases.Insights.GetInsights;
 using Core.Application.UseCases.Auth.ForgotPassword;
 using Core.Application.UseCases.Auth.GetMe;
 using Core.Application.UseCases.Auth.Login;
@@ -233,6 +234,7 @@ builder.Services.AddScoped<GetImportHandler>();
 builder.Services.AddScoped<GetAiContextHandler>();
 builder.Services.AddScoped<GetFinancialSummaryHandler>();
 builder.Services.AddScoped<ChatHandler>();
+builder.Services.AddScoped<GetInsightsHandler>();
 
 // Forgot/Reset password — repository, email service, and handlers.
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();

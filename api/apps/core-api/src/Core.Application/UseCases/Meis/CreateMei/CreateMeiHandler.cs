@@ -21,14 +21,21 @@ public class CreateMeiHandler
 
     public async Task<MeiResult> HandleAsync(CreateMeiCommand command, CancellationToken cancellationToken = default)
     {
+        // One MEI per user: MEI is the fiscal identity of the entrepreneur,
+        // so having more than one does not make business sense. Check before
+        // any other validation to give the caller an early, clear error.
+        var existingMeis = await _meiRepository.GetAllByUserIdAsync(command.UserId, cancellationToken);
+        if (existingMeis.Any())
+            throw new InvalidOperationException(
+                "Each account can have only one MEI. Use the existing MEI or update its data.");
+
         // Per-user duplicate-CNPJ check: only meaningful if a CNPJ was supplied.
-        // Cnpj is nullable on the entity, so accepting null here matches the
-        // spec ("MEIs may be created without a CNPJ and have it filled in
-        // later").
+        // Note: existingMeis is already guaranteed empty at this point due to the
+        // one-MEI-per-user check above. This block is kept as a belt-and-suspenders
+        // guard in case the rule is relaxed later.
         if (!string.IsNullOrWhiteSpace(command.Cnpj))
         {
-            var existing = await _meiRepository.GetAllByUserIdAsync(command.UserId, cancellationToken);
-            if (existing.Any(m => string.Equals(m.Cnpj, command.Cnpj, StringComparison.OrdinalIgnoreCase)))
+            if (existingMeis.Any(m => string.Equals(m.Cnpj, command.Cnpj, StringComparison.OrdinalIgnoreCase)))
             {
                 // Re-using the standard InvalidOperationException keeps this
                 // slice focused — if the duplicate-CNPJ rule grows
