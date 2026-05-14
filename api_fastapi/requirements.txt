@@ -31,8 +31,6 @@ bcrypt==5.0.0
     #   chromadb
 build==1.4.3
     # via chromadb
-cachetools==6.2.6
-    # via pyiceberg
 certifi==2026.4.22
     # via
     #   httpcore
@@ -47,7 +45,6 @@ chromadb==1.5.8
     # via api-agent
 click==8.3.3
     # via
-    #   pyiceberg
     #   typer
     #   uvicorn
 colorama==0.4.6 ; os_name == 'nt' or sys_platform == 'win32'
@@ -58,9 +55,7 @@ colorama==0.4.6 ; os_name == 'nt' or sys_platform == 'win32'
     #   tqdm
     #   uvicorn
 cryptography==46.0.7
-    # via
-    #   google-auth
-    #   pyjwt
+    # via google-auth
 cuda-bindings==13.2.0 ; sys_platform == 'linux'
     # via torch
 cuda-pathfinder==1.5.3 ; sys_platform == 'linux'
@@ -69,10 +64,6 @@ cuda-toolkit==13.0.2 ; sys_platform == 'linux'
     # via torch
 dataclasses-json==0.6.7
     # via langchain-community
-deprecation==2.1.0
-    # via
-    #   postgrest
-    #   storage3
 distro==1.9.0
     # via google-genai
 durationpy==0.10
@@ -98,7 +89,6 @@ frozenlist==1.8.0
 fsspec==2026.3.0
     # via
     #   huggingface-hub
-    #   pyiceberg
     #   torch
 google-ai-generativelanguage==0.6.15
     # via google-generativeai
@@ -142,12 +132,8 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-h2==4.3.0
-    # via httpx
 hf-xet==1.4.3 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
     # via huggingface-hub
-hpack==4.1.0
-    # via h2
 httpcore==1.0.9
     # via httpx
 httplib2==0.31.2
@@ -165,11 +151,6 @@ httpx==0.28.1
     #   langgraph-sdk
     #   langsmith
     #   ollama
-    #   postgrest
-    #   storage3
-    #   supabase
-    #   supabase-auth
-    #   supabase-functions
 httpx-sse==0.4.3
     # via langchain-community
 huggingface-hub==1.11.0
@@ -177,8 +158,6 @@ huggingface-hub==1.11.0
     #   sentence-transformers
     #   tokenizers
     #   transformers
-hyperframe==6.1.0
-    # via h2
 idna==3.13
     # via
     #   anyio
@@ -254,9 +233,7 @@ marshmallow==3.26.2
 mdurl==0.1.2
     # via markdown-it-py
 mmh3==5.2.1
-    # via
-    #   chromadb
-    #   pyiceberg
+    # via chromadb
 mpmath==1.3.0
     # via sympy
 multidict==6.7.1
@@ -356,7 +333,6 @@ overrides==7.7.0
 packaging==25.0
     # via
     #   build
-    #   deprecation
     #   huggingface-hub
     #   langchain-core
     #   langsmith
@@ -367,8 +343,6 @@ pandas==3.0.2
     # via api-agent
 passlib==1.7.4
     # via api-agent
-postgrest==2.28.3
-    # via supabase
 propcache==0.4.1
     # via
     #   aiohttp
@@ -412,13 +386,8 @@ pydantic==2.13.3
     #   langgraph
     #   langsmith
     #   ollama
-    #   postgrest
     #   pydantic-extra-types
     #   pydantic-settings
-    #   pyiceberg
-    #   realtime
-    #   storage3
-    #   supabase-auth
 pydantic-core==2.46.3
     # via pydantic
 pydantic-extra-types==2.11.1
@@ -430,28 +399,19 @@ pydantic-settings==2.14.0
     #   langchain-community
 pygments==2.19.2
     # via rich
-pyiceberg==0.11.1
-    # via storage3
 pyjwt==2.12.1
-    # via
-    #   api-agent
-    #   supabase-auth
+    # via api-agent
 pyparsing==3.3.2
-    # via
-    #   httplib2
-    #   pyiceberg
+    # via httplib2
 pypika==0.51.1
     # via chromadb
 pyproject-hooks==1.2.0
     # via build
-pyroaring==1.0.4
-    # via pyiceberg
 python-dateutil==2.9.0.post0
     # via
     #   api-agent
     #   kubernetes
     #   pandas
-    #   strictyaml
 python-dotenv==1.2.1
     # via
     #   api-agent
@@ -471,8 +431,6 @@ pyyaml==6.0.3
     #   langchain-core
     #   transformers
     #   uvicorn
-realtime==2.28.3
-    # via supabase
 referencing==0.37.0
     # via
     #   jsonschema
@@ -489,7 +447,6 @@ requests==2.33.1
     #   langchain-classic
     #   langchain-community
     #   langsmith
-    #   pyiceberg
     #   requests-oauthlib
     #   requests-toolbelt
 requests-oauthlib==2.0.0
@@ -499,7 +456,6 @@ requests-toolbelt==1.0.0
 rich==14.3.4
     # via
     #   chromadb
-    #   pyiceberg
     #   typer
 rpds-py==0.30.0
     # via
@@ -535,18 +491,6 @@ sqlalchemy==2.0.49
     #   langchain-community
 starlette==1.0.0
     # via fastapi
-storage3==2.28.3
-    # via supabase
-strenum==0.4.15
-    # via supabase-functions
-strictyaml==1.7.3
-    # via pyiceberg
-supabase==2.28.3
-    # via api-agent
-supabase-auth==2.28.3
-    # via supabase
-supabase-functions==2.28.3
-    # via supabase
 sympy==1.14.0
     # via torch
 tenacity==9.1.4
@@ -555,7 +499,6 @@ tenacity==9.1.4
     #   google-genai
     #   langchain-community
     #   langchain-core
-    #   pyiceberg
 threadpoolctl==3.6.0
     # via scikit-learn
 tokenizers==0.22.2
@@ -599,7 +542,6 @@ typing-extensions==4.15.0
     #   pydantic
     #   pydantic-core
     #   pydantic-extra-types
-    #   realtime
     #   referencing
     #   sentence-transformers
     #   sqlalchemy
@@ -639,7 +581,6 @@ websocket-client==1.9.0
 websockets==15.0.1
     # via
     #   google-genai
-    #   realtime
     #   uvicorn
 win32-setctime==1.2.0 ; sys_platform == 'win32'
     # via loguru
@@ -648,15 +589,8 @@ xxhash==3.6.0
     #   langgraph
     #   langsmith
 yarl==1.23.0
-    # via
-    #   aiohttp
-    #   postgrest
-    #   storage3
-    #   supabase
-    #   supabase-functions
+    # via aiohttp
 zipp==3.23.1
     # via importlib-metadata
 zstandard==0.25.0
-    # via
-    #   langsmith
-    #   pyiceberg
+    # via langsmith

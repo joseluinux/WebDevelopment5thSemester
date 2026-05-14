@@ -30,4 +30,13 @@ public interface IFastApiService
         string meiId,
         string fileUrl,
         CancellationToken cancellationToken = default);
+
+    // Sends a chat message with MEI context to the FastAPI agent and
+    // returns the assistant's reply.
+    Task<ChatResponseDto> ChatAsync(
+        string meiId,
+        string message,
+        IReadOnlyList<ChatHistoryItemDto> history,
+        Core.Application.UseCases.Ai.GetAiContext.GetAiContextResult context,
+        CancellationToken cancellationToken = default);
 }

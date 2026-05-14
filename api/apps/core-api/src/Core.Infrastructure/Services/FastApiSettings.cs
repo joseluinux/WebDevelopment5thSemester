@@ -16,4 +16,8 @@ public class FastApiSettings
     // BaseUrl so future endpoints (re-classify, dry-run) can live
     // alongside without duplicating the host.
     public string ImportEndpoint { get; set; } = string.Empty;
+
+    // Path of the chat endpoint. Defaults to the FastAPI router prefix
+    // so the setting only needs overriding in non-standard deployments.
+    public string ChatEndpoint { get; set; } = "/api/chat/message";
 }

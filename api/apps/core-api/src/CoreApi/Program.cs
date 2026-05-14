@@ -3,6 +3,8 @@ using Core.Application.Auth;
 using Core.Application.Interfaces;
 using Core.Application.UseCases.Ai.GetAiContext;
 using Core.Application.UseCases.Ai.GetFinancialSummary;
+using Core.Application.UseCases.Ai.Chat;
+using Core.Application.UseCases.Insights.GetInsights;
 using Core.Application.UseCases.Auth.ForgotPassword;
 using Core.Application.UseCases.Auth.GetMe;
 using Core.Application.UseCases.Auth.Login;
@@ -12,9 +14,11 @@ using Core.Application.UseCases.Auth.Register;
 using Core.Application.UseCases.Auth.ResetPassword;
 using Core.Application.UseCases.Employees.CreateEmployee;
 using Core.Application.UseCases.Employees.GetEmployees;
+using Core.Application.UseCases.Imports.ConfirmImport;
 using Core.Application.UseCases.Imports.CreateImport;
 using Core.Application.UseCases.Imports.GetImport;
 using Core.Application.UseCases.Imports.GetImports;
+using Core.Application.UseCases.Imports.PreviewImport;
 using Core.Application.UseCases.Meis.CreateMei;
 using Core.Application.UseCases.Meis.DeleteMei;
 using Core.Application.UseCases.Meis.GetMei;
@@ -218,6 +222,8 @@ builder.Services.AddScoped<IStorageService>(sp =>
 });
 
 builder.Services.AddScoped<CreateImportHandler>();
+builder.Services.AddScoped<PreviewImportHandler>();
+builder.Services.AddScoped<ConfirmImportHandler>();
 builder.Services.AddScoped<GetImportsHandler>();
 builder.Services.AddScoped<GetImportHandler>();
 
@@ -227,6 +233,8 @@ builder.Services.AddScoped<GetImportHandler>();
 // already registered above.
 builder.Services.AddScoped<GetAiContextHandler>();
 builder.Services.AddScoped<GetFinancialSummaryHandler>();
+builder.Services.AddScoped<ChatHandler>();
+builder.Services.AddScoped<GetInsightsHandler>();
 
 // Forgot/Reset password — repository, email service, and handlers.
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();

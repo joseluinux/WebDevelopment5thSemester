@@ -14,6 +14,7 @@ import type { CreateTransactionDto, TransactionResult } from "@/types";
 
 function groupByDate<T extends { date: string }>(txs: T[]) {
   return txs.reduce<Record<string, T[]>>((acc, tx) => {
+    if (!acc[tx.date]) acc[tx.date] = [];
     acc[tx.date].push(tx);
     return acc;
   }, {});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCreateMei } from "@/hooks/useMeis";
 import { useMeiContext } from "@/contexts/MeiContext";
@@ -9,9 +9,16 @@ import axios from "axios";
 export default function OnboardingPage() {
   const router = useRouter();
   const createMei = useCreateMei();
-  const { refetchMeis } = useMeiContext();
+  const { refetchMeis, meis, isMeisLoading } = useMeiContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Guard: users who already have a MEI should never be on the onboarding page.
+  useEffect(() => {
+    if (!isMeisLoading && meis.length > 0) {
+      router.replace("/dashboard");
+    }
+  }, [meis, isMeisLoading, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -99,14 +106,14 @@ export default function OnboardingPage() {
           <div className="space-y-4">
             <div className="flex justify-between items-end mb-2">
               <span className="font-label text-xs uppercase tracking-widest text-primary font-bold">
-                Step 02 of 04
+                Step 02 of 02
               </span>
               <span className="font-headline text-2xl font-bold text-white">
                 Business DNA
               </span>
             </div>
             <div className="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
-              <div className="h-full prism-gradient w-2/4 transition-all duration-500" />
+              <div className="h-full prism-gradient w-full transition-all duration-500" />
             </div>
           </div>
 

@@ -128,3 +128,27 @@ class ImportResponse(BaseModel):
     processed_rows: int
     errors: list[str]
     status: StatusEnum | str
+
+
+# ──────────────────────────────────────────────
+# Chat — LUMEMEI AI
+# ──────────────────────────────────────────────
+
+class ChatHistoryItem(BaseModel):
+    """Uma mensagem no histórico da conversa."""
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    """Payload enviado pelo backend C# para processar uma mensagem de chat."""
+    mei_id: str
+    message: str
+    history: list[ChatHistoryItem] = []
+    context: dict  # GetAiContextResult serializado pelo C# (snake_case)
+
+
+class ChatResponse(BaseModel):
+    """Resposta gerada pelo LLM."""
+    reply: str
+    mei_id: str

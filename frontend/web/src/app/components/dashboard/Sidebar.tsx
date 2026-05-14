@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { label: "Import", href: "/dashboard/import", icon: "cloud_upload" },
   { label: "Products", href: "/dashboard/products", icon: "inventory_2" },
   { label: "Employees", href: "/dashboard/employees", icon: "badge" },
-  { label: "LUMEMEI AI", href: "/dashboard/oracle-ai", icon: "psychology" },
+  { label: "LUMEMEI AI", href: "/dashboard/lumemei-ai", icon: "psychology" },
   { label: "Insights", href: "/dashboard/insights", icon: "insights" },
   { label: "Settings", href: "/dashboard/settings", icon: "settings" },
 ];
@@ -68,13 +68,6 @@ export function Sidebar() {
               </option>
             ))}
           </select>
-          <Link
-            href="/onboarding"
-            className="flex items-center gap-1 mt-2 px-2 text-[10px] text-on-surface-variant hover:text-primary transition-colors"
-          >
-            <span className="material-symbols-outlined text-sm">add</span>
-            Novo MEI
-          </Link>
         </div>
       )}
 
