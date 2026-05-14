@@ -88,7 +88,15 @@ async def run_chat(request: ChatRequest) -> ChatResponse:
 
     response = await llm.ainvoke(messages)
 
+    # Gemini models may return content as a list of blocks instead of a plain string
+    content = response.content
+    if isinstance(content, list):
+        content = " ".join(
+            block.get("text", "") if isinstance(block, dict) else str(block)
+            for block in content
+        ).strip()
+
     return ChatResponse(
-        reply=response.content,
+        reply=content,
         mei_id=request.mei_id,
     )
